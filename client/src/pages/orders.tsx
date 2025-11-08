@@ -1,52 +1,55 @@
+import { useQuery } from "@tanstack/react-query";
+import { useLocationStore } from "@/hooks/use-location";
 import { OrderCard } from "@/components/order-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import type { OrderWithItems } from "@shared/schema";
+import { formatDistanceToNow } from "date-fns";
 
 export default function Orders() {
-  //todo: remove mock functionality
-  const orders = [
-    {
-      id: "1234",
-      orderNumber: "#1234",
-      table: "Table 5",
-      server: "Sarah M.",
-      items: [
-        { name: "Grilled Salmon", quantity: 2 },
-        { name: "Caesar Salad", quantity: 1 },
-        { name: "Chocolate Cake", quantity: 1, notes: "No nuts" },
-      ],
-      status: "new" as const,
-      timestamp: "2 min ago",
-      total: "$78.50",
+  const { selectedLocationId } = useLocationStore();
+
+  const { data: orders = [], isLoading } = useQuery<OrderWithItems[]>({
+    queryKey: ["/api/orders", selectedLocationId],
+    enabled: !!selectedLocationId,
+    queryFn: async () => {
+      const response = await fetch(`/api/orders?locationId=${selectedLocationId}`);
+      if (!response.ok) throw new Error("Failed to fetch orders");
+      return response.json();
     },
-    {
-      id: "1235",
-      orderNumber: "#1235",
-      table: "Table 12",
-      server: "Mike D.",
-      items: [
-        { name: "Margherita Pizza", quantity: 1 },
-        { name: "Classic Burger", quantity: 2 },
-      ],
-      status: "preparing" as const,
-      timestamp: "8 min ago",
-      total: "$48.97",
-    },
-    {
-      id: "1236",
-      orderNumber: "#1236",
-      table: "Table 3",
-      server: "Emma L.",
-      items: [{ name: "Caesar Salad", quantity: 3 }],
-      status: "ready" as const,
-      timestamp: "12 min ago",
-      total: "$38.97",
-    },
-  ];
+    refetchInterval: 10000,
+  });
+
+  if (!selectedLocationId) {
+    return (
+      <div className="p-6">
+        <p className="text-muted-foreground">Please select a location from the sidebar</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return <div className="p-6">Loading orders...</div>;
+  }
 
   const newOrders = orders.filter((o) => o.status === "new");
   const preparingOrders = orders.filter((o) => o.status === "preparing");
   const readyOrders = orders.filter((o) => o.status === "ready");
+
+  const formatOrderForCard = (order: OrderWithItems) => ({
+    id: order.id,
+    orderNumber: order.orderNumber,
+    table: order.table?.tableNumber ? `Table ${order.table.tableNumber}` : "Takeout",
+    server: order.server?.name || "N/A",
+    items: order.items.map((item) => ({
+      name: item.menuItem.name,
+      quantity: item.quantity,
+      notes: item.notes || undefined,
+    })),
+    status: order.status as "new" | "preparing" | "ready" | "completed",
+    timestamp: formatDistanceToNow(new Date(order.createdAt), { addSuffix: true }),
+    total: `$${parseFloat(order.total).toFixed(2)}`,
+  });
 
   return (
     <div className="space-y-6">
@@ -87,7 +90,7 @@ export default function Orders() {
         <TabsContent value="all" className="mt-6">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {orders.map((order) => (
-              <OrderCard key={order.id} {...order} />
+              <OrderCard key={order.id} {...formatOrderForCard(order)} />
             ))}
           </div>
         </TabsContent>
@@ -95,7 +98,7 @@ export default function Orders() {
         <TabsContent value="new" className="mt-6">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {newOrders.map((order) => (
-              <OrderCard key={order.id} {...order} />
+              <OrderCard key={order.id} {...formatOrderForCard(order)} />
             ))}
           </div>
         </TabsContent>
@@ -103,7 +106,7 @@ export default function Orders() {
         <TabsContent value="preparing" className="mt-6">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {preparingOrders.map((order) => (
-              <OrderCard key={order.id} {...order} />
+              <OrderCard key={order.id} {...formatOrderForCard(order)} />
             ))}
           </div>
         </TabsContent>
@@ -111,7 +114,7 @@ export default function Orders() {
         <TabsContent value="ready" className="mt-6">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {readyOrders.map((order) => (
-              <OrderCard key={order.id} {...order} />
+              <OrderCard key={order.id} {...formatOrderForCard(order)} />
             ))}
           </div>
         </TabsContent>

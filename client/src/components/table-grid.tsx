@@ -1,15 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
+import { useLocationStore } from "@/hooks/use-location";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users } from "lucide-react";
-
-interface Table {
-  id: string;
-  number: string;
-  capacity: number;
-  status: "available" | "occupied" | "reserved" | "cleaning";
-  currentParty?: number;
-  server?: string;
-}
+import type { TableWithDetails } from "@shared/schema";
 
 const statusConfig = {
   available: { label: "Available", color: "bg-green-500/10 text-green-700 dark:text-green-400" },
@@ -19,17 +13,25 @@ const statusConfig = {
 };
 
 export function TableGrid() {
-  //todo: remove mock functionality
-  const tables: Table[] = [
-    { id: "1", number: "1", capacity: 2, status: "occupied", currentParty: 2, server: "Sarah" },
-    { id: "2", number: "2", capacity: 2, status: "available" },
-    { id: "3", number: "3", capacity: 4, status: "occupied", currentParty: 4, server: "Mike" },
-    { id: "4", number: "4", capacity: 4, status: "reserved" },
-    { id: "5", number: "5", capacity: 6, status: "occupied", currentParty: 5, server: "Emma" },
-    { id: "6", number: "6", capacity: 2, status: "cleaning" },
-    { id: "7", number: "7", capacity: 4, status: "available" },
-    { id: "8", number: "8", capacity: 8, status: "reserved" },
-  ];
+  const { selectedLocationId } = useLocationStore();
+
+  const { data: tables = [], isLoading } = useQuery<TableWithDetails[]>({
+    queryKey: ["/api/tables", selectedLocationId],
+    enabled: !!selectedLocationId,
+    queryFn: async () => {
+      const response = await fetch(`/api/tables?locationId=${selectedLocationId}`);
+      if (!response.ok) throw new Error("Failed to fetch tables");
+      return response.json();
+    },
+  });
+
+  if (!selectedLocationId) {
+    return <p className="text-muted-foreground">Please select a location</p>;
+  }
+
+  if (isLoading) {
+    return <p className="text-muted-foreground">Loading tables...</p>;
+  }
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -43,7 +45,7 @@ export function TableGrid() {
             <div className="text-center space-y-3">
               <div>
                 <div className="text-3xl font-bold" data-testid={`text-table-number-${table.id}`}>
-                  {table.number}
+                  {table.tableNumber}
                 </div>
                 <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground mt-1">
                   <Users className="h-3 w-3" />
@@ -57,9 +59,9 @@ export function TableGrid() {
 
               {table.status === "occupied" && table.server && (
                 <div className="text-xs text-muted-foreground">
-                  Server: {table.server}
+                  Server: {table.server.name}
                   <br />
-                  Party of {table.currentParty}
+                  {table.currentPartySize && `Party of ${table.currentPartySize}`}
                 </div>
               )}
             </div>

@@ -1,66 +1,40 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { MenuItemCard } from "@/components/menu-item-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import salmonImage from "@assets/generated_images/Signature_salmon_dish_d8e8f815.png";
-import pizzaImage from "@assets/generated_images/Margherita_pizza_menu_item_9d9fa87c.png";
-import burgerImage from "@assets/generated_images/Classic_burger_and_fries_87d1cbb1.png";
-import saladImage from "@assets/generated_images/Caesar_salad_menu_item_a35f34ac.png";
-import cakeImage from "@assets/generated_images/Chocolate_lava_cake_dessert_5b5aa89d.png";
+import type { MenuItem, MenuCategory } from "@shared/schema";
 
 export default function MenuManagement() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  //todo: remove mock functionality
-  const menuItems = [
-    {
-      id: "1",
-      name: "Grilled Salmon",
-      description: "Fresh Atlantic salmon with lemon butter sauce and seasonal vegetables",
-      price: "$24.99",
-      category: "Main Course",
-      image: salmonImage,
-      available: true,
+  const { data: menuItems = [], isLoading } = useQuery<MenuItem[]>({
+    queryKey: ["/api/menu-items"],
+  });
+
+  const { data: categories = [] } = useQuery<MenuCategory[]>({
+    queryKey: ["/api/menu-categories"],
+  });
+
+  const toggleAvailability = useMutation({
+    mutationFn: async ({ id, available }: { id: string; available: boolean }) => {
+      return apiRequest("PATCH", `/api/menu-items/${id}`, { available: !available });
     },
-    {
-      id: "2",
-      name: "Margherita Pizza",
-      description: "Wood-fired pizza with fresh mozzarella, basil, and San Marzano tomatoes",
-      price: "$16.99",
-      category: "Main Course",
-      image: pizzaImage,
-      available: true,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items"] });
     },
-    {
-      id: "3",
-      name: "Classic Burger",
-      description: "Angus beef with cheddar, lettuce, tomato, and crispy fries",
-      price: "$14.99",
-      category: "Main Course",
-      image: burgerImage,
-      available: false,
-    },
-    {
-      id: "4",
-      name: "Caesar Salad",
-      description: "Crisp romaine lettuce with parmesan, croutons, and Caesar dressing",
-      price: "$12.99",
-      category: "Appetizer",
-      image: saladImage,
-      available: true,
-    },
-    {
-      id: "5",
-      name: "Chocolate Lava Cake",
-      description: "Warm chocolate cake with molten center and vanilla ice cream",
-      price: "$8.99",
-      category: "Dessert",
-      image: cakeImage,
-      available: true,
-    },
-  ];
+  });
+
+  const filteredItems = menuItems.filter((item) =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (isLoading) {
+    return <div className="p-6">Loading menu items...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -91,48 +65,44 @@ export default function MenuManagement() {
       <Tabs defaultValue="all">
         <TabsList>
           <TabsTrigger value="all" data-testid="tab-all">All Items</TabsTrigger>
-          <TabsTrigger value="appetizers" data-testid="tab-appetizers">Appetizers</TabsTrigger>
-          <TabsTrigger value="mains" data-testid="tab-mains">Main Courses</TabsTrigger>
-          <TabsTrigger value="desserts" data-testid="tab-desserts">Desserts</TabsTrigger>
+          {categories.map((category) => (
+            <TabsTrigger key={category.id} value={category.id} data-testid={`tab-${category.name.toLowerCase()}`}>
+              {category.name}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="all" className="mt-6">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {menuItems.map((item) => (
-              <MenuItemCard key={item.id} {...item} />
+            {filteredItems.map((item) => (
+              <MenuItemCard
+                key={item.id}
+                {...item}
+                price={`$${parseFloat(item.price).toFixed(2)}`}
+                category={categories.find((c) => c.id === item.categoryId)?.name || ""}
+                image={item.imageUrl || ""}
+              />
             ))}
           </div>
         </TabsContent>
 
-        <TabsContent value="appetizers" className="mt-6">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {menuItems
-              .filter((item) => item.category === "Appetizer")
-              .map((item) => (
-                <MenuItemCard key={item.id} {...item} />
-              ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="mains" className="mt-6">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {menuItems
-              .filter((item) => item.category === "Main Course")
-              .map((item) => (
-                <MenuItemCard key={item.id} {...item} />
-              ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="desserts" className="mt-6">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {menuItems
-              .filter((item) => item.category === "Dessert")
-              .map((item) => (
-                <MenuItemCard key={item.id} {...item} />
-              ))}
-          </div>
-        </TabsContent>
+        {categories.map((category) => (
+          <TabsContent key={category.id} value={category.id} className="mt-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredItems
+                .filter((item) => item.categoryId === category.id)
+                .map((item) => (
+                  <MenuItemCard
+                    key={item.id}
+                    {...item}
+                    price={`$${parseFloat(item.price).toFixed(2)}`}
+                    category={category.name}
+                    image={item.imageUrl || ""}
+                  />
+                ))}
+            </div>
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   );

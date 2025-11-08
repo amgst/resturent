@@ -1,40 +1,27 @@
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus, Search, Mail, Phone } from "lucide-react";
+import type { Customer } from "@shared/schema";
 
 export default function Customers() {
-  //todo: remove mock functionality
-  const customers = [
-    {
-      id: "1",
-      name: "Alice Johnson",
-      email: "alice@email.com",
-      phone: "+1 234-567-8901",
-      visits: 12,
-      totalSpent: "$890",
-      initials: "AJ",
-    },
-    {
-      id: "2",
-      name: "Bob Wilson",
-      email: "bob@email.com",
-      phone: "+1 234-567-8902",
-      visits: 8,
-      totalSpent: "$620",
-      initials: "BW",
-    },
-    {
-      id: "3",
-      name: "Carol Martinez",
-      email: "carol@email.com",
-      phone: "+1 234-567-8903",
-      visits: 15,
-      totalSpent: "$1,240",
-      initials: "CM",
-    },
-  ];
+  const { data: customers = [], isLoading } = useQuery<Customer[]>({
+    queryKey: ["/api/customers"],
+  });
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  if (isLoading) {
+    return <div className="p-6">Loading customers...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -60,28 +47,32 @@ export default function Customers() {
             <CardContent className="p-6">
               <div className="flex items-start gap-4 mb-4">
                 <Avatar className="h-12 w-12">
-                  <AvatarFallback>{customer.initials}</AvatarFallback>
+                  <AvatarFallback>{getInitials(customer.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold truncate">{customer.name}</h3>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                    <Mail className="h-3 w-3" />
-                    <span className="truncate">{customer.email}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                    <Phone className="h-3 w-3" />
-                    <span>{customer.phone}</span>
-                  </div>
+                  {customer.email && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                      <Mail className="h-3 w-3" />
+                      <span className="truncate">{customer.email}</span>
+                    </div>
+                  )}
+                  {customer.phone && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                      <Phone className="h-3 w-3" />
+                      <span>{customer.phone}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                 <div>
                   <p className="text-sm text-muted-foreground">Visits</p>
-                  <p className="text-lg font-semibold">{customer.visits}</p>
+                  <p className="text-lg font-semibold">{customer.totalVisits}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Spent</p>
-                  <p className="text-lg font-semibold">{customer.totalSpent}</p>
+                  <p className="text-lg font-semibold">${parseFloat(customer.totalSpent).toFixed(2)}</p>
                 </div>
               </div>
             </CardContent>

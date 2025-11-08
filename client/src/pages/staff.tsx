@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { useLocationStore } from "@/hooks/use-location";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,16 +11,40 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { Staff } from "@shared/schema";
 
-export default function Staff() {
-  //todo: remove mock functionality
-  const staff = [
-    { id: "1", name: "Sarah Martinez", role: "Server", status: "active", initials: "SM" },
-    { id: "2", name: "Mike Davis", role: "Chef", status: "active", initials: "MD" },
-    { id: "3", name: "Emma Lopez", role: "Server", status: "active", initials: "EL" },
-    { id: "4", name: "John Manager", role: "Manager", status: "active", initials: "JM" },
-    { id: "5", name: "Lisa Chen", role: "Host", status: "off-duty", initials: "LC" },
-  ];
+export default function StaffPage() {
+  const { selectedLocationId } = useLocationStore();
+
+  const { data: staff = [], isLoading } = useQuery<Staff[]>({
+    queryKey: ["/api/staff", selectedLocationId],
+    enabled: !!selectedLocationId,
+    queryFn: async () => {
+      const response = await fetch(`/api/staff${selectedLocationId ? `?locationId=${selectedLocationId}` : ""}`);
+      if (!response.ok) throw new Error("Failed to fetch staff");
+      return response.json();
+    },
+  });
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  if (!selectedLocationId) {
+    return (
+      <div className="p-6">
+        <p className="text-muted-foreground">Please select a location from the sidebar</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return <div className="p-6">Loading staff...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -39,19 +65,19 @@ export default function Staff() {
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <Avatar className="h-12 w-12">
-                  <AvatarFallback>{member.initials}</AvatarFallback>
+                  <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold truncate">{member.name}</h3>
-                  <p className="text-sm text-muted-foreground">{member.role}</p>
+                  <p className="text-sm text-muted-foreground capitalize">{member.role}</p>
                   <Badge
                     className={`mt-2 ${
-                      member.status === "active"
+                      member.active
                         ? "bg-green-500/10 text-green-700 dark:text-green-400"
                         : "bg-gray-500/10 text-gray-700 dark:text-gray-400"
                     }`}
                   >
-                    {member.status}
+                    {member.active ? "active" : "inactive"}
                   </Badge>
                 </div>
                 <DropdownMenu>

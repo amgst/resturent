@@ -1,5 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { Home, UtensilsCrossed, ShoppingCart, Flame, Users, Calendar, DollarSign, FileText, Database, Settings, Store, QrCode } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useLocationStore } from "@/hooks/use-location";
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +16,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import type { Location } from "@shared/schema";
+import { useEffect } from "react";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -32,6 +36,17 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { selectedLocationId, setSelectedLocationId } = useLocationStore();
+
+  const { data: locations = [] } = useQuery<Location[]>({
+    queryKey: ["/api/locations"],
+  });
+
+  useEffect(() => {
+    if (locations.length > 0 && !selectedLocationId) {
+      setSelectedLocationId(locations[0].id);
+    }
+  }, [locations, selectedLocationId, setSelectedLocationId]);
 
   return (
     <Sidebar>
@@ -50,14 +65,20 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Location</SidebarGroupLabel>
           <SidebarGroupContent>
-            <Select defaultValue="downtown" data-testid="select-location">
+            <Select
+              value={selectedLocationId || undefined}
+              onValueChange={setSelectedLocationId}
+              data-testid="select-location"
+            >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="downtown">Downtown</SelectItem>
-                <SelectItem value="westside">West Side</SelectItem>
-                <SelectItem value="northend">North End</SelectItem>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </SidebarGroupContent>
@@ -84,7 +105,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-4">
         <div className="flex items-center gap-3 hover-elevate rounded-md p-2">
           <Avatar className="h-8 w-8">
-            <AvatarFallback>JD</AvatarFallback>
+            <AvatarFallback>JM</AvatarFallback>
           </Avatar>
           <div className="flex flex-col flex-1 min-w-0">
             <span className="text-sm font-medium truncate">John Manager</span>
