@@ -461,4 +461,5 @@ export class DbStorage implements IStorage {
   }
 }
 
-export const storage = new DbStorage();
+// Using JSON storage instead of database
+export { storage } from './json-storage';
