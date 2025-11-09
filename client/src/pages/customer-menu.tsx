@@ -159,7 +159,7 @@ export default function CustomerMenu() {
       items: cart.map((item) => ({
         menuItemId: item.id,
         quantity: item.quantity,
-        unitPrice: item.price,
+        price: item.price,
       })),
     };
 
