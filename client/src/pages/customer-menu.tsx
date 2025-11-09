@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,11 @@ import { Search, ShoppingCart, Plus, Minus, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 type MenuItem = {
   id: number;
@@ -37,6 +42,11 @@ export default function CustomerMenu() {
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutDialogOpen, setIsCheckoutDialogOpen] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [tableNumber, setTableNumber] = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
+  const { toast } = useToast();
 
   const { data: menuItems = [] } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items"],
@@ -44,6 +54,10 @@ export default function CustomerMenu() {
 
   const { data: categories = [] } = useQuery<MenuCategory[]>({
     queryKey: ["/api/menu-categories"],
+  });
+
+  const { data: locations = [] } = useQuery<any[]>({
+    queryKey: ["/api/locations"],
   });
 
   const availableItems = menuItems.filter((item) => item.available);
@@ -86,6 +100,62 @@ export default function CustomerMenu() {
   );
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const createOrderMutation = useMutation({
+    mutationFn: async (orderData: any) => {
+      return apiRequest("POST", "/api/orders", orderData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Order placed successfully!",
+        description: "Your order has been sent to the kitchen.",
+      });
+      setCart([]);
+      setIsCartOpen(false);
+      setIsCheckoutDialogOpen(false);
+      setCustomerName("");
+      setTableNumber("");
+      setOrderNotes("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Order failed",
+        description: error.message || "Failed to place order. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCheckout = () => {
+    if (!customerName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter your name to place the order.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const locationId = locations[0]?.id || "loc-1";
+    const subtotal = cartTotal;
+    const tax = subtotal * 0.1;
+    const total = subtotal + tax;
+
+    const orderData = {
+      locationId,
+      subtotal: subtotal.toFixed(2),
+      tax: tax.toFixed(2),
+      total: total.toFixed(2),
+      notes: `Customer: ${customerName}${tableNumber ? `, Table: ${tableNumber}` : ""}${orderNotes ? `\n${orderNotes}` : ""}`,
+      items: cart.map((item) => ({
+        menuItemId: item.id.toString(),
+        quantity: item.quantity,
+        unitPrice: item.price,
+      })),
+    };
+
+    createOrderMutation.mutate(orderData);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,6 +264,7 @@ export default function CustomerMenu() {
                     className="w-full"
                     size="lg"
                     disabled={cart.length === 0}
+                    onClick={() => setIsCheckoutDialogOpen(true)}
                     data-testid="button-checkout"
                   >
                     Proceed to Checkout
@@ -262,6 +333,82 @@ export default function CustomerMenu() {
           ))}
         </Tabs>
       </main>
+
+      <Dialog open={isCheckoutDialogOpen} onOpenChange={setIsCheckoutDialogOpen}>
+        <DialogContent data-testid="dialog-checkout">
+          <DialogHeader>
+            <DialogTitle>Complete Your Order</DialogTitle>
+            <DialogDescription>
+              Please provide your details to complete the order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="customer-name">Name *</Label>
+              <Input
+                id="customer-name"
+                placeholder="Your name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                data-testid="input-customer-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="table-number">Table Number (Optional)</Label>
+              <Input
+                id="table-number"
+                placeholder="Table number"
+                value={tableNumber}
+                onChange={(e) => setTableNumber(e.target.value)}
+                data-testid="input-table-number"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="order-notes">Special Requests (Optional)</Label>
+              <Textarea
+                id="order-notes"
+                placeholder="Any special requests or dietary requirements?"
+                value={orderNotes}
+                onChange={(e) => setOrderNotes(e.target.value)}
+                data-testid="input-order-notes"
+                className="resize-none"
+                rows={3}
+              />
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Subtotal:</span>
+                <span data-testid="text-subtotal">${cartTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Tax (10%):</span>
+                <span data-testid="text-tax">${(cartTotal * 0.1).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-semibold">
+                <span>Total:</span>
+                <span data-testid="text-total">${(cartTotal * 1.1).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCheckoutDialogOpen(false)}
+              data-testid="button-cancel-checkout"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCheckout}
+              disabled={createOrderMutation.isPending}
+              data-testid="button-confirm-checkout"
+            >
+              {createOrderMutation.isPending ? "Placing Order..." : "Place Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
