@@ -38,7 +38,7 @@
       "description": "Fresh romaine lettuce with parmesan and croutons",
       "price": "12.99",
       "categoryId": "cat-1",
-      "imageUrl": null,
+      "imageUrl": "https://ik.imagekit.io/pocebrysp/Samsung/Apple%20iPad%20Air%2011.webp?updatedAt=1756634475361",
       "available": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
     },
@@ -48,7 +48,7 @@
       "description": "Toasted bread with tomatoes and basil",
       "price": "9.99",
       "categoryId": "cat-1",
-      "imageUrl": null,
+      "imageUrl": "https://images.unsplash.com/photo-1556075798-4825dfaaf498?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
       "available": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
     },
