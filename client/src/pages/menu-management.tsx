@@ -28,6 +28,7 @@ import type { MenuItem, MenuCategory } from "@shared/schema";
 export default function MenuManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -42,7 +43,7 @@ export default function MenuManagement() {
     queryKey: ["/api/menu-categories"],
   });
 
-  const createMenuItem = useMutation({
+  const saveMenuItem = useMutation({
     mutationFn: async () => {
       if (!name.trim() || !price || !categoryId) {
         throw new Error("Please fill in all required fields");
@@ -51,18 +52,26 @@ export default function MenuManagement() {
       if (isNaN(priceNum) || priceNum <= 0) {
         throw new Error("Price must be a valid positive number");
       }
-      return apiRequest("POST", "/api/menu-items", {
+      
+      const data = {
         name: name.trim(),
         description: description.trim() || null,
         price: priceNum.toFixed(2),
         categoryId,
         imageUrl: imageUrl.trim() || null,
         available: true,
-      });
+      };
+      
+      if (editingId) {
+        return apiRequest("PATCH", `/api/menu-items/${editingId}`, data);
+      } else {
+        return apiRequest("POST", "/api/menu-items", data);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items"] });
       setOpen(false);
+      setEditingId(null);
       setName("");
       setDescription("");
       setPrice("");
@@ -70,8 +79,21 @@ export default function MenuManagement() {
       setImageUrl("");
     },
     onError: (error: any) => {
-      console.error("Failed to create menu item:", error);
-      alert(error.message || "Failed to create menu item");
+      console.error("Failed to save menu item:", error);
+      alert(error.message || "Failed to save menu item");
+    },
+  });
+
+  const deleteMenuItem = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/menu-items/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items"] });
+    },
+    onError: (error: any) => {
+      console.error("Failed to delete menu item:", error);
+      alert("Failed to delete menu item");
     },
   });
 
@@ -83,6 +105,32 @@ export default function MenuManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items"] });
     },
   });
+
+  const handleEdit = (item: MenuItem) => {
+    setEditingId(item.id);
+    setName(item.name);
+    setDescription(item.description || "");
+    setPrice(parseFloat(item.price).toFixed(2));
+    setCategoryId(item.categoryId || "");
+    setImageUrl(item.imageUrl || "");
+    setOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to delete this menu item?")) {
+      deleteMenuItem.mutate(id);
+    }
+  };
+
+  const handleAddNew = () => {
+    setEditingId(null);
+    setName("");
+    setDescription("");
+    setPrice("");
+    setCategoryId("");
+    setImageUrl("");
+    setOpen(true);
+  };
 
   const filteredItems = menuItems.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -99,7 +147,7 @@ export default function MenuManagement() {
           <h1 className="text-3xl font-bold">Menu Management</h1>
           <p className="text-muted-foreground">Manage your restaurant menu items across all locations</p>
         </div>
-        <Button onClick={() => setOpen(true)} data-testid="button-add-item">
+        <Button onClick={handleAddNew} data-testid="button-add-item">
           <Plus className="h-4 w-4 mr-2" />
           Add Menu Item
         </Button>
@@ -138,6 +186,9 @@ export default function MenuManagement() {
                 price={`$${parseFloat(item.price).toFixed(2)}`}
                 category={categories.find((c) => c.id === item.categoryId)?.name || ""}
                 image={item.imageUrl || ""}
+                onEdit={() => handleEdit(item)}
+                onDelete={() => handleDelete(item.id)}
+                onToggleAvailability={() => toggleAvailability.mutate({ id: item.id, available: item.available })}
               />
             ))}
           </div>
@@ -156,6 +207,9 @@ export default function MenuManagement() {
                     price={`$${parseFloat(item.price).toFixed(2)}`}
                     category={category.name}
                     image={item.imageUrl || ""}
+                    onEdit={() => handleEdit(item)}
+                    onDelete={() => handleDelete(item.id)}
+                    onToggleAvailability={() => toggleAvailability.mutate({ id: item.id, available: item.available })}
                   />
                 ))}
             </div>
@@ -166,9 +220,9 @@ export default function MenuManagement() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Menu Item</DialogTitle>
+            <DialogTitle>{editingId ? "Edit Menu Item" : "Add New Menu Item"}</DialogTitle>
             <DialogDescription>
-              Create a new menu item. Name, price, and category are required.
+              {editingId ? "Update the menu item details below." : "Create a new menu item. Name, price, and category are required."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -236,10 +290,10 @@ export default function MenuManagement() {
               Cancel
             </Button>
             <Button
-              onClick={() => createMenuItem.mutate()}
-              disabled={!name || !price || !categoryId || createMenuItem.isPending}
+              onClick={() => saveMenuItem.mutate()}
+              disabled={!name || !price || !categoryId || saveMenuItem.isPending}
             >
-              {createMenuItem.isPending ? "Creating..." : "Create Item"}
+              {saveMenuItem.isPending ? "Saving..." : editingId ? "Update Item" : "Create Item"}
             </Button>
           </DialogFooter>
         </DialogContent>

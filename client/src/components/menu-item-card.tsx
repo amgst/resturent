@@ -17,9 +17,12 @@ interface MenuItemCardProps {
   category: string;
   image: string;
   available: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onToggleAvailability?: () => void;
 }
 
-export function MenuItemCard({ id, name, description, price, category, available, image }: MenuItemCardProps) {
+export function MenuItemCard({ id, name, description, price, category, available, image, onEdit, onDelete, onToggleAvailability }: MenuItemCardProps) {
   return (
     <Card className="overflow-hidden">
       <div className="aspect-square relative">
@@ -43,11 +46,11 @@ export function MenuItemCard({ id, name, description, price, category, available
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem data-testid={`button-edit-${id}`}>
+              <DropdownMenuItem onClick={onEdit} data-testid={`button-edit-${id}`}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" data-testid={`button-delete-${id}`}>
+              <DropdownMenuItem onClick={onDelete} className="text-destructive" data-testid={`button-delete-${id}`}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </DropdownMenuItem>
@@ -57,7 +60,7 @@ export function MenuItemCard({ id, name, description, price, category, available
         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{description}</p>
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold text-primary" data-testid={`text-price-${id}`}>{price}</span>
-          <Button size="sm" variant={available ? "default" : "secondary"} data-testid={`button-toggle-${id}`}>
+          <Button onClick={onToggleAvailability} size="sm" variant={available ? "default" : "secondary"} data-testid={`button-toggle-${id}`}>
             {available ? "Available" : "Unavailable"}
           </Button>
         </div>
