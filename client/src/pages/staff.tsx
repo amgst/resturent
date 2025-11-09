@@ -1,9 +1,28 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useLocationStore } from "@/hooks/use-location";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Plus, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
@@ -15,6 +34,10 @@ import type { Staff } from "@shared/schema";
 
 export default function StaffPage() {
   const { selectedLocationId } = useLocationStore();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("");
 
   const { data: staff = [], isLoading } = useQuery<Staff[]>({
     queryKey: ["/api/staff", selectedLocationId],
@@ -23,6 +46,35 @@ export default function StaffPage() {
       const response = await fetch(`/api/staff${selectedLocationId ? `?locationId=${selectedLocationId}` : ""}`);
       if (!response.ok) throw new Error("Failed to fetch staff");
       return response.json();
+    },
+  });
+
+  const createStaff = useMutation({
+    mutationFn: async () => {
+      if (!selectedLocationId) {
+        throw new Error("Please select a location first");
+      }
+      if (!name.trim() || !email.trim() || !role) {
+        throw new Error("Please fill in all required fields");
+      }
+      return apiRequest("POST", "/api/staff", {
+        name: name.trim(),
+        email: email.trim(),
+        role,
+        locationId: selectedLocationId,
+        active: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff", selectedLocationId] });
+      setOpen(false);
+      setName("");
+      setEmail("");
+      setRole("");
+    },
+    onError: (error: any) => {
+      console.error("Failed to create staff:", error);
+      alert(error.message || "Failed to create staff member");
     },
   });
 
@@ -53,7 +105,7 @@ export default function StaffPage() {
           <h1 className="text-3xl font-bold">Staff Management</h1>
           <p className="text-muted-foreground">Manage staff members and permissions</p>
         </div>
-        <Button data-testid="button-add-staff">
+        <Button onClick={() => setOpen(true)} data-testid="button-add-staff">
           <Plus className="h-4 w-4 mr-2" />
           Add Staff
         </Button>
@@ -97,6 +149,66 @@ export default function StaffPage() {
           </Card>
         ))}
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Staff Member</DialogTitle>
+            <DialogDescription>
+              Create a new staff member. All fields are required.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="staff-name">Name *</Label>
+              <Input
+                id="staff-name"
+                placeholder="Full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="staff-email">Email *</Label>
+              <Input
+                id="staff-email"
+                type="email"
+                placeholder="email@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="staff-role">Role *</Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="server">Server</SelectItem>
+                  <SelectItem value="chef">Chef</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="host">Host</SelectItem>
+                  <SelectItem value="bartender">Bartender</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createStaff.mutate()}
+              disabled={!name || !email || !role || createStaff.isPending}
+            >
+              {createStaff.isPending ? "Creating..." : "Create Staff"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
