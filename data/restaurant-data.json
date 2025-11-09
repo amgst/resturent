@@ -219,8 +219,57 @@
       "serverId": null
     }
   ],
-  "orders": [],
-  "orderItems": [],
+  "orders": [
+    {
+      "id": "1762680278142-pab8wahhx",
+      "createdAt": "2025-11-09T09:24:38.142Z",
+      "updatedAt": "2025-11-09T09:24:38.142Z",
+      "status": "new",
+      "serverId": null,
+      "tableId": null,
+      "customerId": null,
+      "notes": "Customer: azam",
+      "orderNumber": "#278140",
+      "locationId": "loc-1",
+      "subtotal": "45.96",
+      "tax": "4.60",
+      "total": "50.56"
+    }
+  ],
+  "orderItems": [
+    {
+      "id": "1762680278142-ptz9lnx16",
+      "orderId": "1762680278142-pab8wahhx",
+      "notes": null,
+      "menuItemId": "item-2",
+      "quantity": 1,
+      "price": "14.99"
+    },
+    {
+      "id": "1762680278142-a7vi6ytto",
+      "orderId": "1762680278142-pab8wahhx",
+      "notes": null,
+      "menuItemId": "item-10",
+      "quantity": 1,
+      "price": "8.99"
+    },
+    {
+      "id": "1762680278142-btq8u0mvt",
+      "orderId": "1762680278142-pab8wahhx",
+      "notes": null,
+      "menuItemId": "item-11",
+      "quantity": 1,
+      "price": "9.99"
+    },
+    {
+      "id": "1762680278142-25qb1bnzq",
+      "orderId": "1762680278142-pab8wahhx",
+      "notes": null,
+      "menuItemId": "item-12",
+      "quantity": 1,
+      "price": "11.99"
+    }
+  ],
   "staff": [
     {
       "id": "staff-1",
