@@ -179,9 +179,29 @@
       "locationId": "loc-1",
       "active": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
+    },
+    {
+      "id": "1762663354222-5che1atxt",
+      "createdAt": "2025-11-09T04:42:34.222Z",
+      "active": true,
+      "locationId": "loc-1",
+      "name": "staff",
+      "email": "amgst99@gmail.com",
+      "role": "chef"
     }
   ],
-  "customers": [],
+  "customers": [
+    {
+      "id": "1762663341112-rlq9jrb3b",
+      "createdAt": "2025-11-09T04:42:21.112Z",
+      "totalVisits": 0,
+      "totalSpent": "0",
+      "phone": "+493347507666",
+      "email": "amgst99@gmail.com",
+      "notes": null,
+      "name": "test"
+    }
+  ],
   "reservations": [],
   "payments": [],
   "restaurantSettings": [

@@ -233,10 +233,9 @@ export default function Reservations() {
               <Label htmlFor="table">Table (Optional)</Label>
               <Select value={tableId} onValueChange={setTableId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a table" />
+                  <SelectValue placeholder="Select a table (or leave blank)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No table assigned</SelectItem>
                   {tables.map((table) => (
                     <SelectItem key={table.id} value={table.id}>
                       Table {table.tableNumber} (Capacity: {table.capacity})

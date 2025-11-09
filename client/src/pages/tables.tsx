@@ -146,10 +146,9 @@ export default function Tables() {
               <Label htmlFor="area">Area (Optional)</Label>
               <Select value={areaId} onValueChange={setAreaId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select an area" />
+                  <SelectValue placeholder="Select an area (or leave blank)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No area</SelectItem>
                   {areas.map((area) => (
                     <SelectItem key={area.id} value={area.id}>
                       {area.name}
