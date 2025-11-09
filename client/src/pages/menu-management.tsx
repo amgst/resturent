@@ -32,6 +32,7 @@ export default function MenuManagement() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
 
   const { data: menuItems = [], isLoading } = useQuery<MenuItem[]>({
     queryKey: ["/api/menu-items"],
@@ -55,6 +56,7 @@ export default function MenuManagement() {
         description: description.trim() || null,
         price: priceNum.toFixed(2),
         categoryId,
+        imageUrl: imageUrl.trim() || null,
         available: true,
       });
     },
@@ -65,6 +67,7 @@ export default function MenuManagement() {
       setDescription("");
       setPrice("");
       setCategoryId("");
+      setImageUrl("");
     },
     onError: (error: any) => {
       console.error("Failed to create menu item:", error);
@@ -131,6 +134,7 @@ export default function MenuManagement() {
               <MenuItemCard
                 key={item.id}
                 {...item}
+                description={item.description || ""}
                 price={`$${parseFloat(item.price).toFixed(2)}`}
                 category={categories.find((c) => c.id === item.categoryId)?.name || ""}
                 image={item.imageUrl || ""}
@@ -148,6 +152,7 @@ export default function MenuManagement() {
                   <MenuItemCard
                     key={item.id}
                     {...item}
+                    description={item.description || ""}
                     price={`$${parseFloat(item.price).toFixed(2)}`}
                     category={category.name}
                     image={item.imageUrl || ""}
@@ -212,6 +217,18 @@ export default function MenuManagement() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">Image URL</Label>
+              <Input
+                id="imageUrl"
+                placeholder="/assets/generated_images/your-image.png"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Optional. Use paths like /assets/generated_images/image.png for images in the project
+              </p>
             </div>
           </div>
           <DialogFooter>
