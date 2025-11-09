@@ -1,4 +1,4 @@
-import { CustomerMenu } from "@/components/customer-menu";
+import CustomerMenu from "./customer-menu";
 
 export default function QRMenu() {
   return <CustomerMenu />;

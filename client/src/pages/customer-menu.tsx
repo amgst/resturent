@@ -16,14 +16,14 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 type MenuItem = {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   price: string;
   categoryId: string;
   imageUrl: string | null;
   available: boolean;
-  locationId: number;
+  locationId: string;
 };
 
 type MenuCategory = {
@@ -31,7 +31,7 @@ type MenuCategory = {
   name: string;
   description: string | null;
   displayOrder: number;
-  locationId: number;
+  locationId: string;
 };
 
 interface CartItem extends MenuItem {
@@ -78,7 +78,7 @@ export default function CustomerMenu() {
     });
   };
 
-  const removeFromCart = (itemId: number) => {
+  const removeFromCart = (itemId: string) => {
     setCart((prev) => {
       const existing = prev.find((i) => i.id === itemId);
       if (existing && existing.quantity > 1) {
@@ -90,7 +90,7 @@ export default function CustomerMenu() {
     });
   };
 
-  const deleteFromCart = (itemId: number) => {
+  const deleteFromCart = (itemId: string) => {
     setCart((prev) => prev.filter((i) => i.id !== itemId));
   };
 
@@ -136,7 +136,16 @@ export default function CustomerMenu() {
       return;
     }
 
-    const locationId = locations[0]?.id || "loc-1";
+    if (!locations || locations.length === 0) {
+      toast({
+        title: "Location not available",
+        description: "Unable to determine location. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const locationId = locations[0]?.id;
     const subtotal = cartTotal;
     const tax = subtotal * 0.1;
     const total = subtotal + tax;
@@ -148,7 +157,7 @@ export default function CustomerMenu() {
       total: total.toFixed(2),
       notes: `Customer: ${customerName}${tableNumber ? `, Table: ${tableNumber}` : ""}${orderNotes ? `\n${orderNotes}` : ""}`,
       items: cart.map((item) => ({
-        menuItemId: item.id.toString(),
+        menuItemId: item.id,
         quantity: item.quantity,
         unitPrice: item.price,
       })),
@@ -401,7 +410,7 @@ export default function CustomerMenu() {
             </Button>
             <Button
               onClick={handleCheckout}
-              disabled={createOrderMutation.isPending}
+              disabled={createOrderMutation.isPending || !locations || locations.length === 0}
               data-testid="button-confirm-checkout"
             >
               {createOrderMutation.isPending ? "Placing Order..." : "Place Order"}
