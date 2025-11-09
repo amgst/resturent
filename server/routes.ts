@@ -9,6 +9,7 @@ import {
   insertAreaSchema,
   insertOrderSchema,
   insertOrderItemSchema,
+  insertOrderItemCreateSchema,
   insertStaffSchema,
   insertCustomerSchema,
   insertReservationSchema,
@@ -243,7 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orderWithNumber = { ...orderData, orderNumber };
       
       const validatedOrder = insertOrderSchema.parse(orderWithNumber);
-      const validatedItems = items.map((item: any) => insertOrderItemSchema.parse(item));
+      const validatedItems = items.map((item: any) => insertOrderItemCreateSchema.parse(item));
       
       const order = await storage.createOrder(validatedOrder, validatedItems);
       res.status(201).json(order);

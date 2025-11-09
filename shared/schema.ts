@@ -160,6 +160,7 @@ export const insertStaffSchema = createInsertSchema(staff).omit({ id: true, crea
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, createdAt: true, totalVisits: true, totalSpent: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ id: true });
+export const insertOrderItemCreateSchema = createInsertSchema(orderItems).omit({ id: true, orderId: true });
 export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true, createdAt: true });
 export const insertReservationSchema = createInsertSchema(reservations).omit({ id: true, createdAt: true });
 export const insertRestaurantSettingsSchema = createInsertSchema(restaurantSettings).omit({ id: true, updatedAt: true });
