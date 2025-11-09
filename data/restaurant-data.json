@@ -17,98 +17,158 @@
     },
     {
       "id": "cat-2",
-      "name": "Main Course",
+      "name": "Salads",
       "displayOrder": 2
     },
     {
       "id": "cat-3",
-      "name": "Desserts",
+      "name": "Burgers",
       "displayOrder": 3
     },
     {
       "id": "cat-4",
-      "name": "Beverages",
+      "name": "Pizza",
       "displayOrder": 4
+    },
+    {
+      "id": "cat-5",
+      "name": "Pasta",
+      "displayOrder": 5
+    },
+    {
+      "id": "cat-6",
+      "name": "Main Course",
+      "displayOrder": 6
+    },
+    {
+      "id": "cat-7",
+      "name": "Desserts",
+      "displayOrder": 7
+    },
+    {
+      "id": "cat-8",
+      "name": "Beverages",
+      "displayOrder": 8
     }
   ],
   "menuItems": [
     {
       "id": "item-1",
-      "name": "Caesar Salad",
-      "description": "Fresh romaine lettuce with parmesan and croutons",
+      "name": "Buffalo Chicken Wings",
+      "description": "Crispy chicken wings tossed in spicy buffalo sauce, served with celery and blue cheese",
       "price": "12.99",
       "categoryId": "cat-1",
-      "imageUrl": "https://ik.imagekit.io/pocebrysp/Samsung/Apple%20iPad%20Air%2011.webp?updatedAt=1756634475361",
+      "imageUrl": "/images/buffalo_chicken_wing_2ac1d658.jpg",
       "available": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
     },
     {
       "id": "item-2",
-      "name": "Bruschetta",
-      "description": "Toasted bread with tomatoes and basil",
-      "price": "9.99",
+      "name": "Crispy Calamari",
+      "description": "Lightly battered and fried calamari rings with marinara sauce",
+      "price": "14.99",
       "categoryId": "cat-1",
-      "imageUrl": "https://images.unsplash.com/photo-1556075798-4825dfaaf498?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+      "imageUrl": "/images/calamari_fried_appet_5dba311a.jpg",
       "available": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
     },
     {
       "id": "item-3",
-      "name": "Grilled Salmon",
-      "description": "Atlantic salmon with seasonal vegetables",
-      "price": "28.99",
+      "name": "Caesar Salad",
+      "description": "Fresh romaine lettuce, parmesan cheese, croutons, and classic Caesar dressing",
+      "price": "10.99",
       "categoryId": "cat-2",
-      "imageUrl": null,
+      "imageUrl": "/images/fresh_caesar_salad_67ac9961.jpg",
       "available": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
     },
     {
       "id": "item-4",
-      "name": "Ribeye Steak",
-      "description": "12oz ribeye cooked to perfection",
-      "price": "34.99",
-      "categoryId": "cat-2",
-      "imageUrl": null,
+      "name": "Classic Burger",
+      "description": "Juicy beef patty with lettuce, tomato, onion, pickles, and special sauce, served with fries",
+      "price": "15.99",
+      "categoryId": "cat-3",
+      "imageUrl": "/images/gourmet_burger_with__6e9446e9.jpg",
       "available": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
     },
     {
       "id": "item-5",
-      "name": "Chocolate Cake",
-      "description": "Rich chocolate layer cake",
-      "price": "8.99",
-      "categoryId": "cat-3",
-      "imageUrl": null,
+      "name": "Margherita Pizza",
+      "description": "Traditional pizza with fresh mozzarella, tomato sauce, and basil",
+      "price": "16.99",
+      "categoryId": "cat-4",
+      "imageUrl": "/images/margherita_pizza_7b39c30b.jpg",
       "available": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
     },
     {
       "id": "item-6",
-      "name": "Tiramisu",
-      "description": "Classic Italian dessert",
-      "price": "9.99",
-      "categoryId": "cat-3",
-      "imageUrl": null,
+      "name": "Pasta Carbonara",
+      "description": "Creamy pasta with bacon, eggs, parmesan cheese, and black pepper",
+      "price": "18.99",
+      "categoryId": "cat-5",
+      "imageUrl": "/images/pasta_carbonara_30cd643f.jpg",
       "available": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
     },
     {
       "id": "item-7",
-      "name": "Fresh Lemonade",
-      "description": "House-made lemonade",
-      "price": "4.99",
-      "categoryId": "cat-4",
-      "imageUrl": null,
+      "name": "Grilled Salmon",
+      "description": "Fresh Atlantic salmon fillet with lemon butter sauce, served with vegetables",
+      "price": "24.99",
+      "categoryId": "cat-6",
+      "imageUrl": "/images/grilled_salmon_fille_eb672932.jpg",
       "available": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
     },
     {
       "id": "item-8",
-      "name": "Coffee",
-      "description": "Freshly brewed coffee",
-      "price": "2.99",
-      "categoryId": "cat-4",
-      "imageUrl": null,
+      "name": "Ribeye Steak",
+      "description": "Premium 12oz ribeye steak grilled to perfection, served with mashed potatoes",
+      "price": "32.99",
+      "categoryId": "cat-6",
+      "imageUrl": "/images/steak_ribeye_grilled_9c7d817a.jpg",
+      "available": true,
+      "createdAt": "2025-11-08T10:21:56.913Z"
+    },
+    {
+      "id": "item-9",
+      "name": "Street Tacos",
+      "description": "Three soft corn tortillas with seasoned meat, fresh cilantro, onions, and lime",
+      "price": "13.99",
+      "categoryId": "cat-6",
+      "imageUrl": "/images/tacos_mexican_1a6aac13.jpg",
+      "available": true,
+      "createdAt": "2025-11-08T10:21:56.913Z"
+    },
+    {
+      "id": "item-10",
+      "name": "Chocolate Lava Cake",
+      "description": "Warm chocolate cake with a molten center, served with vanilla ice cream",
+      "price": "8.99",
+      "categoryId": "cat-7",
+      "imageUrl": "/images/chocolate_lava_cake_f0d8ed6b.jpg",
+      "available": true,
+      "createdAt": "2025-11-08T10:21:56.913Z"
+    },
+    {
+      "id": "item-11",
+      "name": "Tiramisu",
+      "description": "Classic Italian dessert with coffee-soaked ladyfingers and mascarpone cream",
+      "price": "9.99",
+      "categoryId": "cat-7",
+      "imageUrl": "/images/tiramisu_dessert_fbc215f4.jpg",
+      "available": true,
+      "createdAt": "2025-11-08T10:21:56.913Z"
+    },
+    {
+      "id": "item-12",
+      "name": "Mojito",
+      "description": "Refreshing cocktail with mint, lime, rum, and soda water",
+      "price": "11.99",
+      "categoryId": "cat-8",
+      "imageUrl": "/images/mojito_cocktail_drin_eba489c5.jpg",
       "available": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
     }
@@ -179,29 +239,9 @@
       "locationId": "loc-1",
       "active": true,
       "createdAt": "2025-11-08T10:21:56.913Z"
-    },
-    {
-      "id": "1762663354222-5che1atxt",
-      "createdAt": "2025-11-09T04:42:34.222Z",
-      "active": true,
-      "locationId": "loc-1",
-      "name": "staff",
-      "email": "amgst99@gmail.com",
-      "role": "chef"
     }
   ],
-  "customers": [
-    {
-      "id": "1762663341112-rlq9jrb3b",
-      "createdAt": "2025-11-09T04:42:21.112Z",
-      "totalVisits": 0,
-      "totalSpent": "0",
-      "phone": "+493347507666",
-      "email": "amgst99@gmail.com",
-      "notes": null,
-      "name": "test"
-    }
-  ],
+  "customers": [],
   "reservations": [],
   "payments": [],
   "restaurantSettings": [
