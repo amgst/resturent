@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
-import { UtensilsCrossed } from "lucide-react";
+import { BarChart3, ChefHat, PhoneIncoming, UtensilsCrossed } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BrandTheme } from "@/components/brand-theme";
+import { useRestaurantSettings } from "@/hooks/use-settings";
 
 function friendlyError(error: unknown): string {
   const code = error instanceof FirebaseError ? error.code : "";
@@ -38,6 +39,8 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { data: brand } = useRestaurantSettings(null);
+  const restaurantName = brand?.restaurantName || "Restaurant Manager";
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -70,16 +73,61 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <UtensilsCrossed className="h-6 w-6" />
+    <div className="grid min-h-screen lg:grid-cols-2">
+      <BrandTheme settings={brand} />
+
+      {/* Brand panel (large screens) */}
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground lg:flex">
+        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10" aria-hidden />
+        <div className="absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-black/10" aria-hidden />
+        <div className="relative flex items-center gap-3">
+          {brand?.logoUrl ? (
+            <img src={brand.logoUrl} alt="" className="h-12 w-12 rounded-lg bg-white object-cover" />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/15">
+              <UtensilsCrossed className="h-6 w-6" />
+            </div>
+          )}
+          <span className="text-xl font-semibold">{restaurantName}</span>
+        </div>
+        <div className="relative space-y-6">
+          <h2 className="text-4xl font-bold leading-tight">
+            Orders, tables and regulars.
+            <br />
+            All in one place.
+          </h2>
+          <ul className="space-y-3 text-primary-foreground/90">
+            {[
+              [PhoneIncoming, "Know who's calling before you answer"],
+              [ChefHat, "Send orders straight to the kitchen"],
+              [BarChart3, "See today's sales at a glance"],
+            ].map(([Icon, text]) => {
+              const I = Icon as typeof PhoneIncoming;
+              return (
+                <li key={text as string} className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                    <I className="h-4 w-4" />
+                  </span>
+                  {text as string}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <p className="relative text-sm text-primary-foreground/70">{brand?.tagline || "Restaurant management"}</p>
+      </div>
+
+      {/* Sign-in form */}
+      <div className="flex items-center justify-center bg-muted/30 p-6">
+        <div className="w-full max-w-sm space-y-8">
+          <div className="space-y-2 text-center lg:text-left">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground lg:hidden">
+              <UtensilsCrossed className="h-6 w-6" />
+            </div>
+            <h1 className="text-3xl font-bold">Welcome back</h1>
+            <p className="text-muted-foreground">Sign in to {restaurantName}</p>
           </div>
-          <CardTitle>Staff sign in</CardTitle>
-          <CardDescription>Sign in to manage orders, tables and the menu.</CardDescription>
-        </CardHeader>
-        <CardContent>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -87,6 +135,8 @@ export default function Login() {
                 id="email"
                 type="email"
                 autoComplete="email"
+                placeholder="you@restaurant.com"
+                className="h-11"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -94,11 +144,22 @@ export default function Login() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <button
+                  type="button"
+                  className="text-sm text-primary hover:underline"
+                  onClick={handleReset}
+                  data-testid="button-forgot-password"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <Input
                 id="password"
                 type="password"
                 autoComplete="current-password"
+                className="h-11"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -107,27 +168,22 @@ export default function Login() {
             </div>
 
             {error && (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
                 {error}
               </p>
             )}
-            {notice && <p className="text-sm text-muted-foreground">{notice}</p>}
+            {notice && <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">{notice}</p>}
 
-            <Button type="submit" className="w-full" disabled={busy} data-testid="button-sign-in">
+            <Button type="submit" className="h-11 w-full text-base" disabled={busy} data-testid="button-sign-in">
               {busy ? "Signing in…" : "Sign in"}
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full"
-              onClick={handleReset}
-              data-testid="button-forgot-password"
-            >
-              Forgot password
-            </Button>
           </form>
-        </CardContent>
-      </Card>
+
+          <p className="text-center text-xs text-muted-foreground">
+            Staff accounts are created by the owner or manager.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

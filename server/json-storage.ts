@@ -19,6 +19,8 @@ import type {
   InsertStaff,
   Customer,
   InsertCustomer,
+  CallLog,
+  InsertCallLog,
   Reservation,
   InsertReservation,
   Payment,
@@ -44,6 +46,7 @@ interface JsonData {
   reservations: Reservation[];
   payments: Payment[];
   restaurantSettings: RestaurantSettings[];
+  callLogs: CallLog[];
 }
 
 const DATA_DIR = join(process.cwd(), 'data');
@@ -80,12 +83,14 @@ export class JsonStorage implements IStorage {
     if (existsSync(DATA_FILE)) {
       try {
         const content = readFileSync(DATA_FILE, 'utf-8');
-        return JSON.parse(content, (key, value) => {
+        const parsed = JSON.parse(content, (key, value) => {
           if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(value)) {
             return new Date(value);
           }
           return value;
         });
+        // Files written by older versions may lack newer collections.
+        return { ...this.getEmptyData(), ...parsed };
       } catch (error) {
         console.error('Error loading data file:', error);
         return this.getEmptyData();
@@ -108,6 +113,7 @@ export class JsonStorage implements IStorage {
       reservations: [],
       payments: [],
       restaurantSettings: [],
+      callLogs: [],
     };
   }
 
@@ -411,6 +417,11 @@ export class JsonStorage implements IStorage {
       phone: null,
       email: null,
       notes: null,
+      address: null,
+      birthday: null,
+      allergies: null,
+      tags: [],
+      lastOrderAt: null,
       ...normalized,
     };
     this.data.customers.push(newCustomer);
@@ -428,6 +439,45 @@ export class JsonStorage implements IStorage {
     };
     this.saveData();
     return this.data.customers[index];
+  }
+
+  async recordCustomerOrder(customerId: string, orderTotal: number): Promise<void> {
+    const customer = this.data.customers.find(c => c.id === customerId);
+    if (!customer) return;
+    customer.totalVisits = (customer.totalVisits ?? 0) + 1;
+    customer.totalSpent = (parseFloat(customer.totalSpent ?? "0") + orderTotal).toFixed(2);
+    customer.lastOrderAt = new Date();
+    this.saveData();
+  }
+
+  async getCallLogs(locationId: string | undefined, limit: number): Promise<CallLog[]> {
+    return this.data.callLogs
+      .filter(c => !locationId || c.locationId === locationId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+  }
+
+  async createCallLog(call: InsertCallLog): Promise<CallLog> {
+    const newCall: CallLog = {
+      id: generateId(),
+      createdAt: new Date(),
+      locationId: null,
+      customerId: null,
+      customerName: null,
+      orderId: null,
+      ...normalizeToNull(call),
+    };
+    this.data.callLogs.push(newCall);
+    this.saveData();
+    return newCall;
+  }
+
+  async updateCallLog(id: string, call: Partial<InsertCallLog>): Promise<CallLog | undefined> {
+    const index = this.data.callLogs.findIndex(c => c.id === id);
+    if (index === -1) return undefined;
+    this.data.callLogs[index] = { ...this.data.callLogs[index], ...call };
+    this.saveData();
+    return this.data.callLogs[index];
   }
 
   async getReservations(locationId: string, date?: Date): Promise<ReservationWithDetails[]> {

@@ -20,6 +20,8 @@ import type {
   InsertStaff,
   Customer,
   InsertCustomer,
+  CallLog,
+  InsertCallLog,
   Reservation,
   InsertReservation,
   Payment,
@@ -77,6 +79,13 @@ export interface IStorage {
   getCustomer(id: string): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
   updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  /** Adds one visit and the order total to the customer's stats. */
+  recordCustomerOrder(customerId: string, orderTotal: number): Promise<void>;
+
+  // Call log (caller ID)
+  getCallLogs(locationId: string | undefined, limit: number): Promise<CallLog[]>;
+  createCallLog(call: InsertCallLog): Promise<CallLog>;
+  updateCallLog(id: string, call: Partial<InsertCallLog>): Promise<CallLog | undefined>;
 
   // Reservations
   getReservations(locationId: string, date?: Date): Promise<ReservationWithDetails[]>;

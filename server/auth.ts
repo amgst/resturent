@@ -29,6 +29,8 @@ const PUBLIC_ENDPOINTS: Array<[method: string, path: RegExp]> = [
   ["GET", /^\/api\/menu-categories\/?$/],
   ["GET", /^\/api\/menu-items(\/[^/]+)?\/?$/],
   ["POST", /^\/api\/orders\/?$/],
+  // Branding only (name, logo, colour, tagline, tax, currency) for the customer menu and login screen.
+  ["GET", /^\/api\/settings\/?$/],
 ];
 
 function isPublic(req: Request): boolean {

@@ -87,6 +87,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
     "@capacitor/cli": "^8.6.2",
     "@replit/vite-plugin-cartographer": "^0.4.2",
     "@replit/vite-plugin-dev-banner": "^0.1.1",

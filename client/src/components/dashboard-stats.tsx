@@ -3,6 +3,7 @@ import { useLocationStore } from "@/hooks/use-location";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ShoppingCart, Users, TrendingUp } from "lucide-react";
 import type { OrderWithItems } from "@shared/schema";
+import { useMoney } from "@/hooks/use-settings";
 
 interface StatCardProps {
   title: string;
@@ -32,6 +33,7 @@ function StatCard({ title, value, change, icon, trend }: StatCardProps) {
 }
 
 export function DashboardStats() {
+  const money = useMoney();
   const { selectedLocationId } = useLocationStore();
 
   const { data: orders = [] } = useQuery<OrderWithItems[]>({
@@ -57,7 +59,7 @@ export function DashboardStats() {
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <StatCard
         title="Total Revenue"
-        value={`$${totalRevenue.toFixed(2)}`}
+        value={money(totalRevenue)}
         change="+12.5%"
         icon={<DollarSign className="h-4 w-4" />}
         trend="up"
@@ -78,7 +80,7 @@ export function DashboardStats() {
       />
       <StatCard
         title="Avg Order Value"
-        value={`$${avgOrderValue.toFixed(2)}`}
+        value={money(avgOrderValue)}
         change="+3.1%"
         icon={<TrendingUp className="h-4 w-4" />}
         trend="up"

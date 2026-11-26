@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useMoney, useRestaurantSettings } from "@/hooks/use-settings";
+import { BrandTheme } from "@/components/brand-theme";
 
 type MenuItem = {
   id: string;
@@ -39,6 +41,9 @@ interface CartItem extends MenuItem {
 }
 
 export default function CustomerMenu() {
+  const money = useMoney();
+  const { data: brand } = useRestaurantSettings(null);
+  const taxRate = brand ? parseFloat(brand.taxRate) : 0.1;
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -147,7 +152,7 @@ export default function CustomerMenu() {
 
     const locationId = locations[0]?.id;
     const subtotal = cartTotal;
-    const tax = subtotal * 0.1;
+    const tax = subtotal * taxRate;
     const total = subtotal + tax;
 
     const orderData = {
@@ -168,12 +173,26 @@ export default function CustomerMenu() {
 
   return (
     <div className="min-h-screen bg-background">
+      <BrandTheme settings={brand} />
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">Our Menu</h1>
-              <p className="text-sm text-muted-foreground">Browse and order your favorites</p>
+            <div className="flex min-w-0 items-center gap-3">
+              {brand?.logoUrl ? (
+                <img src={brand.logoUrl} alt="" className="h-12 w-12 rounded-lg object-cover" />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-xl font-bold text-primary-foreground">
+                  {(brand?.restaurantName || "M").charAt(0)}
+                </div>
+              )}
+              <div className="min-w-0">
+                <h1 className="truncate text-2xl font-bold" data-testid="text-brand-name">
+                  {brand?.restaurantName || "Our Menu"}
+                </h1>
+                <p className="truncate text-sm text-muted-foreground">
+                  {brand?.tagline || "Browse and order your favourites"}
+                </p>
+              </div>
             </div>
             <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
               <SheetTrigger asChild>
@@ -216,7 +235,7 @@ export default function CustomerMenu() {
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-medium truncate">{item.name}</h4>
                                 <p className="text-sm text-muted-foreground">
-                                  ${parseFloat(item.price).toFixed(2)} each
+                                  {money(parseFloat(item.price))} each
                                 </p>
                                 <div className="flex items-center gap-2 mt-2">
                                   <Button
@@ -253,7 +272,7 @@ export default function CustomerMenu() {
                               </div>
                               <div className="text-right">
                                 <p className="font-semibold">
-                                  ${(parseFloat(item.price) * item.quantity).toFixed(2)}
+                                  {money((parseFloat(item.price) * item.quantity))}
                                 </p>
                               </div>
                             </div>
@@ -267,7 +286,7 @@ export default function CustomerMenu() {
                 <SheetFooter className="flex-col gap-4">
                   <div className="flex justify-between items-center text-lg font-semibold">
                     <span>Total:</span>
-                    <span data-testid="text-cart-total">${cartTotal.toFixed(2)}</span>
+                    <span data-testid="text-cart-total">{money(cartTotal)}</span>
                   </div>
                   <Button
                     className="w-full"
@@ -388,15 +407,15 @@ export default function CustomerMenu() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span data-testid="text-subtotal">${cartTotal.toFixed(2)}</span>
+                <span data-testid="text-subtotal">{money(cartTotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>Tax (10%):</span>
-                <span data-testid="text-tax">${(cartTotal * 0.1).toFixed(2)}</span>
+                <span>Tax ({Math.round(taxRate * 1000) / 10}%):</span>
+                <span data-testid="text-tax">{money(cartTotal * taxRate)}</span>
               </div>
               <div className="flex justify-between text-lg font-semibold">
                 <span>Total:</span>
-                <span data-testid="text-total">${(cartTotal * 1.1).toFixed(2)}</span>
+                <span data-testid="text-total">{money(cartTotal * (1 + taxRate))}</span>
               </div>
             </div>
           </div>
@@ -429,6 +448,7 @@ interface MenuItemCardProps {
 }
 
 function MenuItemCard({ item, category, onAddToCart }: MenuItemCardProps) {
+  const money = useMoney();
   return (
     <Card className="overflow-hidden hover-elevate" data-testid={`menu-item-${item.id}`}>
       {item.imageUrl && (
@@ -455,7 +475,7 @@ function MenuItemCard({ item, category, onAddToCart }: MenuItemCardProps) {
       </CardHeader>
       <CardFooter className="flex items-center justify-between gap-2">
         <span className="text-xl font-bold">
-          ${parseFloat(item.price).toFixed(2)}
+          {money(parseFloat(item.price))}
         </span>
         <Button onClick={onAddToCart} data-testid={`button-add-${item.id}`}>
           <Plus className="h-4 w-4 mr-2" />

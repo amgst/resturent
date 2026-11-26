@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Home, UtensilsCrossed, ShoppingCart, Flame, Users, Calendar, DollarSign, FileText, Database, Settings, Store, QrCode } from "lucide-react";
+import { Home, UtensilsCrossed, ShoppingCart, Flame, Users, Calendar, DollarSign, FileText, Database, Settings, Store, QrCode, PhoneCall } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useLocationStore } from "@/hooks/use-location";
 import {
@@ -19,6 +19,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { Location } from "@shared/schema";
 import { useEffect } from "react";
 import { AddLocationDialog } from "@/components/add-location-dialog";
+import { useAuth } from "@/lib/auth";
+import { useCurrentSettings } from "@/hooks/use-settings";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -30,6 +32,7 @@ const menuItems = [
   { title: "Reservations", url: "/reservations", icon: Calendar },
   { title: "Staff", url: "/staff", icon: Users },
   { title: "Customers", url: "/customers", icon: Database },
+  { title: "Call History", url: "/calls", icon: PhoneCall },
   { title: "Reports", url: "/reports", icon: FileText },
   { title: "QR Menu", url: "/qr-menu", icon: QrCode },
   { title: "Settings", url: "/settings", icon: Settings },
@@ -42,6 +45,12 @@ export function AppSidebar() {
   const { data: locations = [] } = useQuery<Location[]>({
     queryKey: ["/api/locations"],
   });
+  const { user } = useAuth();
+  const { data: settings } = useCurrentSettings();
+  const currentLocation = locations.find((loc) => loc.id === selectedLocationId);
+  const restaurantName = settings?.restaurantName || "Restaurant Manager";
+  const userLabel = user?.displayName || user?.email?.split("@")[0] || "Staff";
+  const userInitials = userLabel.slice(0, 2).toUpperCase();
 
   useEffect(() => {
     // Pick the first location if none is chosen, or the saved one no longer exists.
@@ -54,12 +63,16 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-            <UtensilsCrossed className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-sm">Restaurant Manager</span>
-            <span className="text-xs text-muted-foreground">Pro Edition</span>
+          {settings?.logoUrl ? (
+            <img src={settings.logoUrl} alt="" className="h-8 w-8 rounded-md object-cover" />
+          ) : (
+            <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
+              <UtensilsCrossed className="h-5 w-5 text-primary-foreground" />
+            </div>
+          )}
+          <div className="flex flex-col min-w-0">
+            <span className="font-semibold text-sm truncate" data-testid="text-restaurant-name">{restaurantName}</span>
+            <span className="text-xs text-muted-foreground truncate">{currentLocation?.name ?? "No location yet"}</span>
           </div>
         </div>
       </SidebarHeader>
@@ -110,11 +123,11 @@ export function AppSidebar() {
       <SidebarFooter className="p-4">
         <div className="flex items-center gap-3 hover-elevate rounded-md p-2">
           <Avatar className="h-8 w-8">
-            <AvatarFallback>JM</AvatarFallback>
+            <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-sm font-medium truncate">John Manager</span>
-            <span className="text-xs text-muted-foreground truncate">Admin</span>
+            <span className="text-sm font-medium truncate" data-testid="text-user-name">{userLabel}</span>
+            <span className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</span>
           </div>
         </div>
       </SidebarFooter>

@@ -5,6 +5,7 @@ import { RecentOrders } from "@/components/recent-orders";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { subDays, format } from "date-fns";
+import { useMoney } from "@/hooks/use-settings";
 
 interface SalesData {
   totalRevenue: number;
@@ -14,6 +15,7 @@ interface SalesData {
 }
 
 export default function Dashboard() {
+  const money = useMoney();
   const { selectedLocationId } = useLocationStore();
 
   const startDate = subDays(new Date(), 7);
@@ -95,7 +97,7 @@ export default function Dashboard() {
               <div className="mt-4 grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-lg font-bold">${salesData.totalRevenue?.toFixed(2) || "0.00"}</p>
+                  <p className="text-lg font-bold">{money(salesData.totalRevenue ?? 0)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Orders</p>
@@ -103,7 +105,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Avg Order</p>
-                  <p className="text-lg font-bold">${salesData.averageOrderValue?.toFixed(2) || "0.00"}</p>
+                  <p className="text-lg font-bold">{money(salesData.averageOrderValue ?? 0)}</p>
                 </div>
               </div>
             )}

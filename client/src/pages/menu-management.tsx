@@ -24,8 +24,10 @@ import {
 import { Plus, Search } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { MenuItem, MenuCategory } from "@shared/schema";
+import { useMoney } from "@/hooks/use-settings";
 
 export default function MenuManagement() {
+  const money = useMoney();
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -183,7 +185,7 @@ export default function MenuManagement() {
                 key={item.id}
                 {...item}
                 description={item.description || ""}
-                price={`$${parseFloat(item.price).toFixed(2)}`}
+                price={money(item.price)}
                 category={categories.find((c) => c.id === item.categoryId)?.name || ""}
                 image={item.imageUrl || ""}
                 onEdit={() => handleEdit(item)}
@@ -204,7 +206,7 @@ export default function MenuManagement() {
                     key={item.id}
                     {...item}
                     description={item.description || ""}
-                    price={`$${parseFloat(item.price).toFixed(2)}`}
+                    price={money(item.price)}
                     category={category.name}
                     image={item.imageUrl || ""}
                     onEdit={() => handleEdit(item)}

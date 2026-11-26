@@ -80,6 +80,23 @@ export const customers = pgTable("customers", {
   totalVisits: integer("total_visits").notNull().default(0),
   totalSpent: decimal("total_spent", { precision: 10, scale: 2 }).notNull().default("0"),
   notes: text("notes"),
+  address: text("address"),
+  birthday: text("birthday"), // YYYY-MM-DD
+  allergies: text("allergies"),
+  tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+  lastOrderAt: timestamp("last_order_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Call log: every incoming call seen by the Android app (caller ID)
+export const callLogs = pgTable("call_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").references(() => locations.id),
+  phone: text("phone").notNull(),
+  customerId: varchar("customer_id").references(() => customers.id),
+  customerName: text("customer_name"),
+  outcome: text("outcome").notNull().default("no_order"), // "no_order" | "order_placed"
+  orderId: varchar("order_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -157,7 +174,19 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).omit({ id: tru
 export const insertAreaSchema = createInsertSchema(areas).omit({ id: true });
 export const insertTableSchema = createInsertSchema(tables).omit({ id: true });
 export const insertStaffSchema = createInsertSchema(staff).omit({ id: true, createdAt: true });
-export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, createdAt: true, totalVisits: true, totalSpent: true });
+export const insertCustomerSchema = createInsertSchema(customers)
+  .omit({ id: true, createdAt: true, totalVisits: true, totalSpent: true, lastOrderAt: true })
+  .extend({
+    email: z.string().email("Email doesn't look right").nullable().optional(),
+    birthday: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Birthday must be YYYY-MM-DD")
+      .nullable()
+      .optional(),
+  });
+export const insertCallLogSchema = createInsertSchema(callLogs, {
+  outcome: () => z.enum(["no_order", "order_placed"]),
+}).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertOrderItemSchema = createInsertSchema(orderItems).omit({ id: true });
 export const insertOrderItemCreateSchema = createInsertSchema(orderItems).omit({ id: true, orderId: true });
@@ -180,6 +209,8 @@ export type InsertStaff = z.infer<typeof insertStaffSchema>;
 export type Staff = typeof staff.$inferSelect;
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
+export type InsertCallLog = z.infer<typeof insertCallLogSchema>;
+export type CallLog = typeof callLogs.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;

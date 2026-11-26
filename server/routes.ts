@@ -16,7 +16,16 @@ import {
   insertReservationSchema,
   insertPaymentSchema,
   insertRestaurantSettingsSchema,
+  insertCallLogSchema,
 } from "../shared/schema.js";
+import type { ZodError } from "zod";
+
+/** First validation problem as a readable sentence, e.g. "email: Email doesn't look right". */
+function firstIssue(error: ZodError): string {
+  const issue = error.issues[0];
+  if (!issue) return "Invalid data";
+  return issue.path.length ? `${issue.path.join(".")}: ${issue.message}` : issue.message;
+}
 
 /** JSON can't carry dates, so the browser sends them as text; turn that field back into a Date. */
 function withDate(body: any, field: string) {
@@ -260,6 +269,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedItems = items.map((item: any) => insertOrderItemCreateSchema.parse(item));
       
       const order = await storage.createOrder(validatedOrder, validatedItems);
+      if (order.customerId) {
+        await storage.recordCustomerOrder(order.customerId, parseFloat(order.total));
+      }
       res.status(201).json(order);
     } catch (error) {
       console.error("Order validation error:", error);
@@ -404,6 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }),
         items.map((i) => insertOrderItemCreateSchema.parse(i)) as any,
       );
+      await storage.recordCustomerOrder(customer.id, parseFloat(order.total));
       res.status(201).json({ order, skipped });
     } catch (error) {
       console.error("Repeat order failed:", error);
@@ -425,23 +438,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/customers", async (req, res) => {
     try {
-      const validated = insertCustomerSchema.parse(req.body);
-      const customer = await storage.createCustomer(validated);
+      const parsed = insertCustomerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: firstIssue(parsed.error) });
+      }
+      const customer = await storage.createCustomer(parsed.data);
       res.status(201).json(customer);
     } catch (error) {
-      res.status(400).json({ error: "Invalid customer data" });
+      res.status(500).json({ error: "Failed to create customer" });
     }
   });
 
   app.patch("/api/customers/:id", async (req, res) => {
     try {
-      const customer = await storage.updateCustomer(req.params.id, req.body);
+      const parsed = insertCustomerSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: firstIssue(parsed.error) });
+      }
+      const customer = await storage.updateCustomer(req.params.id, parsed.data);
       if (!customer) {
         return res.status(404).json({ error: "Customer not found" });
       }
       res.json(customer);
     } catch (error) {
       res.status(500).json({ error: "Failed to update customer" });
+    }
+  });
+
+  app.get("/api/customers/:id/orders", async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(String(req.query.limit ?? "20"), 10) || 20, 100);
+      res.json(await storage.getOrdersByCustomer(req.params.id, limit));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch customer orders" });
+    }
+  });
+
+  // Call log (caller ID)
+  app.get("/api/calls", async (req, res) => {
+    try {
+      const locationId = req.query.locationId as string | undefined;
+      const limit = Math.min(parseInt(String(req.query.limit ?? "100"), 10) || 100, 500);
+      res.json(await storage.getCallLogs(locationId, limit));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch call history" });
+    }
+  });
+
+  app.post("/api/calls", async (req, res) => {
+    try {
+      const parsed = insertCallLogSchema.safeParse({ outcome: "no_order", ...req.body });
+      if (!parsed.success) {
+        return res.status(400).json({ error: firstIssue(parsed.error) });
+      }
+      res.status(201).json(await storage.createCallLog(parsed.data));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to save call" });
+    }
+  });
+
+  app.patch("/api/calls/:id", async (req, res) => {
+    try {
+      const parsed = insertCallLogSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: firstIssue(parsed.error) });
+      }
+      const call = await storage.updateCallLog(req.params.id, parsed.data);
+      if (!call) {
+        return res.status(404).json({ error: "Call not found" });
+      }
+      res.json(call);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update call" });
     }
   });
 

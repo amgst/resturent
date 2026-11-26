@@ -5,8 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import type { OrderWithItems } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
+import { useMoney } from "@/hooks/use-settings";
 
 export default function Orders() {
+  const money = useMoney();
   const { selectedLocationId } = useLocationStore();
 
   const { data: orders = [], isLoading } = useQuery<OrderWithItems[]>({
@@ -48,7 +50,7 @@ export default function Orders() {
     })),
     status: order.status as "new" | "preparing" | "ready" | "completed",
     timestamp: formatDistanceToNow(new Date(order.createdAt), { addSuffix: true }),
-    total: `$${parseFloat(order.total).toFixed(2)}`,
+    total: money(order.total),
   });
 
   return (

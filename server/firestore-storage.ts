@@ -1,4 +1,4 @@
-import { Timestamp, FieldPath, type DocumentSnapshot } from "firebase-admin/firestore";
+import { Timestamp, FieldPath, FieldValue, type DocumentSnapshot } from "firebase-admin/firestore";
 import { getDb } from "./firebase-admin.js";
 import type {
   Location,
@@ -19,6 +19,8 @@ import type {
   InsertStaff,
   Customer,
   InsertCustomer,
+  CallLog,
+  InsertCallLog,
   Reservation,
   InsertReservation,
   Payment,
@@ -45,6 +47,7 @@ const C = {
   reservations: "reservations",
   payments: "payments",
   settings: "restaurantSettings",
+  callLogs: "callLogs",
 } as const;
 
 /** Firestore stores dates as Timestamps; the app expects JS Dates. */
@@ -328,13 +331,57 @@ export class FirestoreStorage implements IStorage {
       phone: null,
       email: null,
       notes: null,
+      address: null,
+      birthday: null,
+      allergies: null,
+      tags: [],
       ...nullify(customer),
+      lastOrderAt: null,
       createdAt: new Date(),
     });
   }
 
   async updateCustomer(id: string, customer: Partial<InsertCustomer>): Promise<Customer | undefined> {
     return update<Customer>(C.customers, id, customer);
+  }
+
+  async recordCustomerOrder(customerId: string, orderTotal: number): Promise<void> {
+    const ref = getDb().collection(C.customers).doc(customerId);
+    // Transaction so two orders at once can't overwrite each other's total.
+    await getDb().runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const spent = parseFloat(String(snap.get("totalSpent") ?? "0")) + orderTotal;
+      tx.update(ref, {
+        totalVisits: FieldValue.increment(1),
+        totalSpent: spent.toFixed(2),
+        lastOrderAt: new Date(),
+      });
+    });
+  }
+
+  // Call log
+  async getCallLogs(locationId: string | undefined, limit: number): Promise<CallLog[]> {
+    // Sorted in code to avoid needing a composite Firestore index.
+    const calls = locationId
+      ? await listWhere<CallLog>(C.callLogs, "locationId", locationId)
+      : await listAll<CallLog>(C.callLogs);
+    return calls.sort(byNewest).slice(0, limit);
+  }
+
+  async createCallLog(call: InsertCallLog): Promise<CallLog> {
+    return create<CallLog>(C.callLogs, {
+      locationId: null,
+      customerId: null,
+      customerName: null,
+      orderId: null,
+      ...nullify(call),
+      createdAt: new Date(),
+    });
+  }
+
+  async updateCallLog(id: string, call: Partial<InsertCallLog>): Promise<CallLog | undefined> {
+    return update<CallLog>(C.callLogs, id, call);
   }
 
   // Reservations

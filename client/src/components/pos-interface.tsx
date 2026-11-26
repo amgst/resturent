@@ -9,6 +9,7 @@ import salmonImage from "@assets/generated_images/Signature_salmon_dish_d8e8f815
 import pizzaImage from "@assets/generated_images/Margherita_pizza_menu_item_9d9fa87c.png";
 import burgerImage from "@assets/generated_images/Classic_burger_and_fries_87d1cbb1.png";
 import saladImage from "@assets/generated_images/Caesar_salad_menu_item_a35f34ac.png";
+import { useMoney, useCurrentSettings } from "@/hooks/use-settings";
 
 interface MenuItem {
   id: string;
@@ -23,6 +24,9 @@ interface CartItem extends MenuItem {
 }
 
 export function POSInterface() {
+  const money = useMoney();
+  const { data: settings } = useCurrentSettings();
+  const taxRate = settings ? parseFloat(settings.taxRate) : 0.1;
   //todo: remove mock functionality
   const menuItems: MenuItem[] = [
     { id: "1", name: "Grilled Salmon", price: 24.99, category: "mains", image: salmonImage },
@@ -93,7 +97,7 @@ export function POSInterface() {
                         <CardContent className="p-3">
                           <div className="flex items-center justify-between">
                             <h4 className="font-semibold">{item.name}</h4>
-                            <span className="font-bold text-primary">${item.price.toFixed(2)}</span>
+                            <span className="font-bold text-primary">{money(item.price)}</span>
                           </div>
                         </CardContent>
                       </Card>
@@ -117,7 +121,7 @@ export function POSInterface() {
                         <CardContent className="p-3">
                           <div className="flex items-center justify-between">
                             <h4 className="font-semibold">{item.name}</h4>
-                            <span className="font-bold text-primary">${item.price.toFixed(2)}</span>
+                            <span className="font-bold text-primary">{money(item.price)}</span>
                           </div>
                         </CardContent>
                       </Card>
@@ -157,7 +161,7 @@ export function POSInterface() {
                   <div key={item.id} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">{item.name}</div>
-                      <div className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</div>
+                      <div className="text-sm text-muted-foreground">{money(item.price)} each</div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
@@ -197,15 +201,15 @@ export function POSInterface() {
             <div className="border-t pt-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{money(total)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>Tax (10%)</span>
-                <span>${(total * 0.1).toFixed(2)}</span>
+                <span>Tax ({Math.round(taxRate * 1000) / 10}%)</span>
+                <span>{money(total * taxRate)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold pt-2 border-t">
                 <span>Total</span>
-                <span data-testid="text-total">${(total * 1.1).toFixed(2)}</span>
+                <span data-testid="text-total">{money(total * (1 + taxRate))}</span>
               </div>
             </div>
 

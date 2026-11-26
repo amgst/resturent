@@ -19,12 +19,15 @@ import Customers from "@/pages/customers";
 import Reports from "@/pages/reports";
 import QRMenu from "@/pages/qr-menu";
 import Settings from "@/pages/settings";
+import Calls from "@/pages/calls";
 import CustomerMenu from "@/pages/customer-menu";
 import Login from "@/pages/login";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { CallerLookup } from "@/components/caller-lookup";
+import { BrandTheme } from "@/components/brand-theme";
+import { useCurrentSettings } from "@/hooks/use-settings";
 
 function AdminRouter() {
   return (
@@ -38,6 +41,7 @@ function AdminRouter() {
       <Route path="/reservations" component={Reservations} />
       <Route path="/staff" component={Staff} />
       <Route path="/customers" component={Customers} />
+      <Route path="/calls" component={Calls} />
       <Route path="/reports" component={Reports} />
       <Route path="/qr-menu" component={QRMenu} />
       <Route path="/settings" component={Settings} />
@@ -59,6 +63,7 @@ function AppContent() {
 
 function StaffArea() {
   const { user, loading, signOut } = useAuth();
+  const { data: settings } = useCurrentSettings();
 
   if (loading) {
     return (
@@ -78,6 +83,7 @@ function StaffArea() {
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
+      <BrandTheme settings={settings} />
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">

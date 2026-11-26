@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 import type { OrderWithItems } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
+import { useMoney } from "@/hooks/use-settings";
 
 const statusColors = {
   new: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
@@ -16,6 +17,7 @@ const statusColors = {
 };
 
 export function RecentOrders() {
+  const money = useMoney();
   const { selectedLocationId } = useLocationStore();
 
   const { data: orders = [], isLoading } = useQuery<OrderWithItems[]>({
@@ -73,7 +75,7 @@ export function RecentOrders() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-semibold">${parseFloat(order.total).toFixed(2)}</span>
+                <span className="font-semibold">{money(order.total)}</span>
                 <Badge className={statusColors[order.status]} data-testid={`badge-status-${order.orderNumber}`}>
                   {order.status}
                 </Badge>

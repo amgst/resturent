@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocationStore } from "@/hooks/use-location";
+import { useRestaurantSettings } from "@/hooks/use-settings";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -38,17 +39,8 @@ export default function Settings() {
     enabled: !!selectedLocationId,
   });
 
-  // Settings may not exist yet for a location (404) — then the first save creates them.
-  const { data: settings, isLoading: settingsLoading } = useQuery<RestaurantSettings | null>({
-    queryKey: ["/api/settings", selectedLocationId],
-    enabled: !!selectedLocationId,
-    queryFn: async () => {
-      const res = await fetch(`/api/settings?locationId=${selectedLocationId}`);
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
-      return res.json();
-    },
-  });
+  // Settings may not exist yet for a location (null) — then the first save creates them.
+  const { data: settings, isLoading: settingsLoading } = useRestaurantSettings(selectedLocationId);
 
   const [general, setGeneral] = useState<GeneralForm>({
     restaurantName: "",
@@ -90,7 +82,7 @@ export default function Settings() {
   };
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/settings", selectedLocationId] });
+    queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
     queryClient.invalidateQueries({ queryKey: ["/api/locations"] });
   };
 

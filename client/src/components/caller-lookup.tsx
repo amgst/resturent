@@ -1,15 +1,28 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { PhoneIncoming, Phone, RotateCcw, UserPlus, Search } from "lucide-react";
-import type { Customer, OrderWithItems } from "@shared/schema";
+import {
+  AlertTriangle,
+  Cake,
+  MapPin,
+  Pencil,
+  Phone,
+  PhoneIncoming,
+  RotateCcw,
+  Search,
+  UserPlus,
+} from "lucide-react";
+import type { CallLog, Customer, OrderWithItems } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CustomerProfileDialog, cleanError } from "@/components/customer-profile-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useLocationStore } from "@/hooks/use-location";
+import { useMoney } from "@/hooks/use-settings";
+import { useCaller } from "@/hooks/use-caller";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { listenForIncomingCalls } from "@/lib/caller-id";
 import { isNativeApp } from "@/lib/platform";
@@ -20,21 +33,38 @@ interface LookupResult {
   orders: OrderWithItems[];
 }
 
-const money = (value: string | number) => `$${Number(value).toFixed(2)}`;
-
 /**
- * Header button + dialog. Staff can type a caller's number to see who they are.
- * In the Android app, the dialog opens by itself when a call comes in.
+ * Header button + caller dialog.
+ * Staff can type a number; in the Android app it opens by itself on an incoming call,
+ * and each incoming call is saved to the call history.
  */
 export function CallerLookup() {
   const { toast } = useToast();
+  const money = useMoney();
   const { selectedLocationId } = useLocationStore();
-  const [open, setOpen] = useState(false);
-  const [incoming, setIncoming] = useState(false);
+  const { open, phone: requestedPhone, incoming, requestId, showCaller, openEmpty, close } = useCaller();
+
   const [phone, setPhone] = useState("");
   const [result, setResult] = useState<LookupResult | null>(null);
-  const [newName, setNewName] = useState("");
-  const [newNotes, setNewNotes] = useState("");
+  const [callLogId, setCallLogId] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const loggedRequest = useRef<number | null>(null);
+
+  const logCall = useMutation({
+    mutationFn: async (data: LookupResult | null) => {
+      const res = await apiRequest("POST", "/api/calls", {
+        phone: requestedPhone,
+        locationId: selectedLocationId ?? null,
+        customerId: data?.customer?.id ?? null,
+        customerName: data?.customer?.name ?? null,
+      });
+      return (await res.json()) as CallLog;
+    },
+    onSuccess: (call) => {
+      setCallLogId(call.id);
+      queryClient.invalidateQueries({ queryKey: ["/api/calls"] });
+    },
+  });
 
   const lookup = useMutation({
     mutationFn: async (number: string) => {
@@ -44,61 +74,34 @@ export function CallerLookup() {
     onSuccess: (data) => setResult(data),
     onError: (error: Error) => {
       setResult(null);
-      toast({ title: "Lookup failed", description: error.message, variant: "destructive" });
+      toast({ title: "Lookup failed", description: cleanError(error), variant: "destructive" });
     },
   });
 
-  const addCustomer = useMutation({
-    mutationFn: async () => {
-      if (!newName.trim()) throw new Error("Enter the customer's name.");
-      await apiRequest("POST", "/api/customers", {
-        name: newName.trim(),
-        phone: phone.trim(),
-        notes: newNotes.trim() || null,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      toast({ title: "Customer saved" });
-      setNewName("");
-      setNewNotes("");
-      lookup.mutate(phone);
-    },
-    onError: (error: Error) => toast({ title: "Couldn't save", description: error.message, variant: "destructive" }),
-  });
-
-  const repeatOrder = useMutation({
-    mutationFn: async (customerId: string) => {
-      if (!selectedLocationId) throw new Error("Select a location in the sidebar first.");
-      const res = await apiRequest("POST", `/api/customers/${customerId}/repeat-last-order`, {
-        locationId: selectedLocationId,
-      });
-      return (await res.json()) as { order: OrderWithItems; skipped: number };
-    },
-    onSuccess: ({ order, skipped }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      toast({
-        title: `Order ${order.orderNumber} sent to the kitchen`,
-        description:
-          `Total ${money(order.total)}` +
-          (skipped > 0 ? ` · ${skipped} item(s) skipped because they're no longer available` : ""),
-      });
-      lookup.mutate(phone);
-    },
-    onError: (error: Error) => toast({ title: "Couldn't repeat order", description: error.message, variant: "destructive" }),
-  });
+  // Each open request (header button, incoming call, call history, customers page).
+  useEffect(() => {
+    if (!open || requestId === 0) return;
+    setPhone(requestedPhone);
+    setResult(null);
+    setCallLogId(null);
+    if (!requestedPhone) return;
+    lookup.mutate(requestedPhone, {
+      onSettled: (data) => {
+        // Save incoming calls to the history once, with the matched customer if any.
+        if (incoming && loggedRequest.current !== requestId) {
+          loggedRequest.current = requestId;
+          logCall.mutate(data ?? null);
+        }
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestId]);
 
   // Android app: open automatically on an incoming call.
   useEffect(() => {
     let stop: () => void = () => {};
     listenForIncomingCalls(
-      ({ number }) => {
-        setIncoming(true);
-        setPhone(number);
-        setResult(null);
-        setOpen(true);
-        lookup.mutate(number);
-      },
+      ({ number }) => showCaller(number, { incoming: true }),
       () =>
         toast({
           title: "Caller ID is off",
@@ -111,10 +114,36 @@ export function CallerLookup() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const repeatOrder = useMutation({
+    mutationFn: async (customerId: string) => {
+      if (!selectedLocationId) throw new Error("Select a location in the sidebar first.");
+      const res = await apiRequest("POST", `/api/customers/${customerId}/repeat-last-order`, {
+        locationId: selectedLocationId,
+      });
+      return (await res.json()) as { order: OrderWithItems; skipped: number };
+    },
+    onSuccess: async ({ order, skipped }) => {
+      if (callLogId) {
+        await apiRequest("PATCH", `/api/calls/${callLogId}`, { outcome: "order_placed", orderId: order.id }).catch(() => {});
+        queryClient.invalidateQueries({ queryKey: ["/api/calls"] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      toast({
+        title: `Order ${order.orderNumber} sent to the kitchen`,
+        description:
+          `Total ${money(order.total)}` +
+          (skipped > 0 ? ` · ${skipped} item(s) skipped because they're no longer available` : ""),
+      });
+      lookup.mutate(phone);
+    },
+    onError: (error: Error) =>
+      toast({ title: "Couldn't repeat order", description: cleanError(error), variant: "destructive" }),
+  });
+
   const search = (event: FormEvent) => {
     event.preventDefault();
-    setIncoming(false);
-    lookup.mutate(phone);
+    if (phone.trim()) showCaller(phone.trim());
   };
 
   const customer = result?.customer;
@@ -125,10 +154,7 @@ export function CallerLookup() {
       <Button
         variant="ghost"
         size="icon"
-        onClick={() => {
-          setIncoming(false);
-          setOpen(true);
-        }}
+        onClick={openEmpty}
         title="Look up caller"
         aria-label="Look up caller"
         data-testid="button-caller-lookup"
@@ -136,7 +162,7 @@ export function CallerLookup() {
         <Phone className="h-5 w-5" />
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(next) => (next ? null : close())}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -144,9 +170,7 @@ export function CallerLookup() {
               {incoming ? "Incoming call" : "Look up caller"}
             </DialogTitle>
             <DialogDescription>
-              {isNativeApp()
-                ? "Calls to this phone open here automatically."
-                : "Type the caller's phone number."}
+              {isNativeApp() ? "Calls to this phone open here automatically." : "Type the caller's phone number."}
             </DialogDescription>
           </DialogHeader>
 
@@ -161,26 +185,69 @@ export function CallerLookup() {
             />
             <Button type="submit" disabled={lookup.isPending || !phone.trim()} data-testid="button-caller-search">
               <Search className="mr-1 h-4 w-4" />
-              {lookup.isPending ? "Searching…" : "Search"}
+              Search
             </Button>
           </form>
 
-          {customer && (
+          {lookup.isPending && (
+            <div className="space-y-2">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          )}
+
+          {!lookup.isPending && customer && (
             <div className="space-y-4" data-testid="caller-found">
               <div className="rounded-md border p-4">
-                <p className="text-xl font-semibold" data-testid="text-caller-name">{customer.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {customer.phone}
-                  {customer.email ? ` · ${customer.email}` : ""}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2 text-sm">
-                  <Badge variant="secondary">{customer.totalVisits} visits</Badge>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 text-xl font-semibold" data-testid="text-caller-name">
+                      {customer.name}
+                      {customer.birthday && isBirthdayToday(customer.birthday) && (
+                        <Cake className="h-5 w-5 text-primary" aria-label="Birthday today" />
+                      )}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {customer.phone}
+                      {customer.email ? ` · ${customer.email}` : ""}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setProfileOpen(true)}
+                    title="Edit customer"
+                    aria-label="Edit customer"
+                    data-testid="button-edit-caller"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {customer.allergies && (
+                  <p className="mt-3 flex items-center gap-2 rounded bg-destructive/10 p-2 text-sm font-medium text-destructive" data-testid="text-caller-allergies">
+                    <AlertTriangle className="h-4 w-4 shrink-0" /> {customer.allergies}
+                  </p>
+                )}
+                {customer.address && (
+                  <p className="mt-2 flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" /> {customer.address}
+                  </p>
+                )}
+
+                <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                  {(customer.tags ?? []).map((tag) => (
+                    <Badge key={tag}>{tag}</Badge>
+                  ))}
+                  <Badge variant="secondary">{customer.totalVisits ?? 0} orders</Badge>
                   <Badge variant="secondary">{money(customer.totalSpent)} spent</Badge>
-                  <Badge variant="secondary">{result!.orders.length} recent orders</Badge>
+                  {customer.lastOrderAt && (
+                    <Badge variant="secondary">Last: {format(new Date(customer.lastOrderAt), "d MMM")}</Badge>
+                  )}
                 </div>
                 {customer.notes && (
                   <p className="mt-3 rounded bg-muted p-2 text-sm" data-testid="text-caller-notes">
-                    📝 {customer.notes}
+                    {customer.notes}
                   </p>
                 )}
               </div>
@@ -204,7 +271,7 @@ export function CallerLookup() {
                   <p className="text-sm font-medium">Recent orders</p>
                   {result!.orders.map((order) => (
                     <div key={order.id} className="rounded-md border p-3 text-sm">
-                      <div className="flex justify-between">
+                      <div className="flex justify-between gap-2">
                         <span className="font-medium">
                           {order.orderNumber} · {format(new Date(order.createdAt), "d MMM yyyy, h:mm a")}
                         </span>
@@ -220,42 +287,38 @@ export function CallerLookup() {
             </div>
           )}
 
-          {result && !customer && (
-            <form
-              className="space-y-3 rounded-md border p-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                addCustomer.mutate();
-              }}
-              data-testid="caller-not-found"
-            >
-              <p className="font-medium">New caller — {phone}</p>
-              <div className="space-y-1">
-                <Label htmlFor="new-customer-name">Name</Label>
-                <Input
-                  id="new-customer-name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  data-testid="input-new-customer-name"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="new-customer-notes">Notes (address, allergies, preferences)</Label>
-                <Input
-                  id="new-customer-notes"
-                  value={newNotes}
-                  onChange={(e) => setNewNotes(e.target.value)}
-                  data-testid="input-new-customer-notes"
-                />
-              </div>
-              <Button type="submit" disabled={addCustomer.isPending} data-testid="button-save-customer">
-                <UserPlus className="mr-2 h-4 w-4" />
-                {addCustomer.isPending ? "Saving…" : "Save customer"}
+          {!lookup.isPending && result && !customer && (
+            <div className="space-y-3 rounded-md border p-4 text-center" data-testid="caller-not-found">
+              <p className="font-medium">New caller</p>
+              <p className="text-sm text-muted-foreground">{phone} isn't in your customer list yet.</p>
+              <Button onClick={() => setProfileOpen(true)} data-testid="button-save-customer">
+                <UserPlus className="mr-2 h-4 w-4" /> Save as new customer
               </Button>
-            </form>
+            </div>
           )}
         </DialogContent>
       </Dialog>
+
+      <CustomerProfileDialog
+        customer={customer ?? null}
+        initialPhone={phone}
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+        onSaved={async (saved) => {
+          // Link this call to the newly saved customer.
+          if (callLogId && !customer) {
+            await apiRequest("PATCH", `/api/calls/${callLogId}`, { customerId: saved.id, customerName: saved.name }).catch(() => {});
+            queryClient.invalidateQueries({ queryKey: ["/api/calls"] });
+          }
+          lookup.mutate(phone);
+        }}
+      />
     </>
   );
+}
+
+function isBirthdayToday(birthday: string): boolean {
+  const [, month, day] = birthday.split("-").map(Number);
+  const today = new Date();
+  return today.getMonth() + 1 === month && today.getDate() === day;
 }
