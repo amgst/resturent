@@ -3,7 +3,8 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 
 // Firebase Auth ID tokens are JWTs signed by Google. We verify them against
 // Google's public keys, so no service-account secret is needed on the server.
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || "resturent-nine";
+// Uses the same project ID as the web app, so one .env value covers both.
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID;
 
 const googleKeys = createRemoteJWKSet(
   new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"),
@@ -35,6 +36,9 @@ function isPublic(req: Request): boolean {
 }
 
 export async function verifyFirebaseToken(token: string): Promise<AuthUser> {
+  if (!PROJECT_ID) {
+    throw new Error("FIREBASE_PROJECT_ID is not set");
+  }
   const { payload } = await jwtVerify(token, googleKeys, {
     issuer: `https://securetoken.google.com/${PROJECT_ID}`,
     audience: PROJECT_ID,
@@ -50,6 +54,12 @@ export async function verifyFirebaseToken(token: string): Promise<AuthUser> {
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.path.startsWith("/api") || isPublic(req)) {
     return next();
+  }
+
+  if (!PROJECT_ID) {
+    // Fail closed: never let requests through when auth isn't configured.
+    console.error("Auth is not configured: set VITE_FIREBASE_PROJECT_ID (or FIREBASE_PROJECT_ID).");
+    return res.status(500).json({ error: "Server sign-in is not configured" });
   }
 
   const header = req.headers.authorization;

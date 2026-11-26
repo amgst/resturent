@@ -1,18 +1,26 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-// Firebase web config for project "resturent-nine".
-// These values are public identifiers (not secrets) and are meant to ship in
-// browser code. Access is protected by Firebase Security Rules and, for the
-// API key, by key restrictions in Google Cloud Console.
+// Values come from .env (local) or the hosting provider's environment
+// variables (Vercel). See .env.example for the full list.
+// They are public identifiers, not secrets: Vite builds them into the page.
 const firebaseConfig = {
-  apiKey: "AIzaSyAa0LCFOT_n8ThcxTtZKUVdQgtdq98l7EA",
-  authDomain: "resturent-nine.firebaseapp.com",
-  projectId: "resturent-nine",
-  storageBucket: "resturent-nine.firebasestorage.app",
-  messagingSenderId: "984696328217",
-  appId: "1:984696328217:web:be47a6baba7387ea71da88",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
+
+const required = ["apiKey", "authDomain", "projectId", "appId"] as const;
+const missing = required.filter((key) => !firebaseConfig[key]);
+if (missing.length > 0) {
+  throw new Error(
+    `Firebase is not configured. Missing: ${missing.join(", ")}. ` +
+      "Copy .env.example to .env and fill in the values from Firebase console → Project settings.",
+  );
+}
 
 // Reuse the existing instance if the module is loaded more than once (hot reload).
 export const firebaseApp: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
