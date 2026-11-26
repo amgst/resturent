@@ -52,7 +52,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/locations/:id", async (req, res) => {
     try {
-      const location = await storage.updateLocation(req.params.id, req.body);
+      const parsed = insertLocationSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid location data", details: parsed.error.message });
+      }
+      const location = await storage.updateLocation(req.params.id, parsed.data);
       if (!location) {
         return res.status(404).json({ error: "Location not found" });
       }
@@ -453,7 +457,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/settings/:id", async (req, res) => {
     try {
-      const settings = await storage.updateSettings(req.params.id, req.body);
+      const parsed = insertRestaurantSettingsSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid settings data", details: parsed.error.message });
+      }
+      const settings = await storage.updateSettings(req.params.id, parsed.data);
       if (!settings) {
         return res.status(404).json({ error: "Settings not found" });
       }
