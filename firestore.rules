@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// Firestore security rules for the restaurant app.
+// Paste into Firebase console → Firestore Database → Rules → Publish.
+//
+// The server (Admin SDK) bypasses these rules and does all reads/writes.
+// Browsers may only READ the call log, and only when signed in,
+// so desktop PCs get instant "incoming call" alerts.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /callLogs/{callId} {
+      allow read: if request.auth != null;
+    }
+
+    // Everything else: no direct browser access.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

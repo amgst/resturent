@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 // Values come from .env (local) or the hosting provider's environment
 // variables (Vercel). See .env.example for the full list.
@@ -26,3 +27,7 @@ if (missing.length > 0) {
 export const firebaseApp: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(firebaseApp);
+
+// Browser-side Firestore: only used for live call alerts (see firestore.rules).
+// All other data goes through the server API.
+export const firestore = getFirestore(firebaseApp);

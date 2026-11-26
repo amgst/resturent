@@ -26,6 +26,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { CallerLookup } from "@/components/caller-lookup";
+import { DesktopCallAlerts } from "@/components/desktop-call-alerts";
 import { BrandTheme } from "@/components/brand-theme";
 import { useCurrentSettings } from "@/hooks/use-settings";
 
@@ -93,6 +94,7 @@ function StaffArea() {
               <span className="hidden text-sm text-muted-foreground sm:inline" data-testid="text-user-email">
                 {user.email}
               </span>
+              <DesktopCallAlerts />
               <CallerLookup />
               <ThemeToggle />
               <Button

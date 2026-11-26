@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
   Cake,
+  ExternalLink,
   MapPin,
   Pencil,
   Phone,
   PhoneIncoming,
   RotateCcw,
   Search,
+  Star,
+  StickyNote,
   UserPlus,
 } from "lucide-react";
 import type { CallLog, Customer, OrderWithItems } from "@shared/schema";
@@ -17,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { CustomerProfileDialog, cleanError } from "@/components/customer-profile-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useLocationStore } from "@/hooks/use-location";
@@ -33,16 +36,55 @@ interface LookupResult {
   orders: OrderWithItems[];
 }
 
+const initials = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+
+function isBirthdayToday(birthday: string | null | undefined): boolean {
+  if (!birthday) return false;
+  const [, month, day] = birthday.split("-").map(Number);
+  const today = new Date();
+  return today.getMonth() + 1 === month && today.getDate() === day;
+}
+
+/** Most-ordered items across the customer's recent orders. */
+function usualItems(orders: OrderWithItems[]): Array<{ name: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const order of orders) {
+    for (const item of order.items) {
+      const name = item.menuItem?.name;
+      if (name) counts.set(name, (counts.get(name) ?? 0) + item.quantity);
+    }
+  }
+  return Array.from(counts, ([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+}
+
 /**
- * Header button + caller dialog.
- * Staff can type a number; in the Android app it opens by itself on an incoming call,
- * and each incoming call is saved to the call history.
+ * Header button + caller card.
+ * Opens by itself on an incoming call (Android app, or desktop via live alerts),
+ * or staff can type a number. Incoming calls are saved to the call history.
  */
 export function CallerLookup() {
   const { toast } = useToast();
   const money = useMoney();
   const { selectedLocationId } = useLocationStore();
-  const { open, phone: requestedPhone, incoming, requestId, showCaller, openEmpty, close } = useCaller();
+  const {
+    open,
+    phone: requestedPhone,
+    incoming,
+    callLogId: requestedCallLogId,
+    requestId,
+    showCaller,
+    openEmpty,
+    close,
+  } = useCaller();
 
   const [phone, setPhone] = useState("");
   const [result, setResult] = useState<LookupResult | null>(null);
@@ -78,17 +120,17 @@ export function CallerLookup() {
     },
   });
 
-  // Each open request (header button, incoming call, call history, customers page).
+  // Each open request (header button, incoming call, call history, customers page, desktop alert).
   useEffect(() => {
     if (!open || requestId === 0) return;
     setPhone(requestedPhone);
     setResult(null);
-    setCallLogId(null);
+    setCallLogId(requestedCallLogId);
     if (!requestedPhone) return;
     lookup.mutate(requestedPhone, {
       onSettled: (data) => {
-        // Save incoming calls to the history once, with the matched customer if any.
-        if (incoming && loggedRequest.current !== requestId) {
+        // The phone saves each incoming call once. Desktop alerts already have the saved entry.
+        if (incoming && !requestedCallLogId && loggedRequest.current !== requestId) {
           loggedRequest.current = requestId;
           logCall.mutate(data ?? null);
         }
@@ -146,8 +188,14 @@ export function CallerLookup() {
     if (phone.trim()) showCaller(phone.trim());
   };
 
-  const customer = result?.customer;
-  const lastOrder = result?.orders[0];
+  const customer = result?.customer ?? null;
+  const orders = result?.orders ?? [];
+  const lastOrder = orders[0];
+  const usual = useMemo(() => usualItems(orders), [orders]);
+  const visits = customer?.totalVisits ?? 0;
+  const spent = parseFloat(customer?.totalSpent ?? "0");
+  const loading = lookup.isPending;
+  const unknownCaller = !loading && !!result && !customer;
 
   return (
     <>
@@ -163,144 +211,247 @@ export function CallerLookup() {
       </Button>
 
       <Dialog open={open} onOpenChange={(next) => (next ? null : close())}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {incoming ? <PhoneIncoming className="h-5 w-5 text-primary" /> : <Phone className="h-5 w-5" />}
-              {incoming ? "Incoming call" : "Look up caller"}
-            </DialogTitle>
-            <DialogDescription>
-              {isNativeApp() ? "Calls to this phone open here automatically." : "Type the caller's phone number."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={search} className="flex gap-2">
-            <Input
-              type="tel"
-              placeholder="0412 345 678"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              aria-label="Phone number"
-              data-testid="input-caller-phone"
-            />
-            <Button type="submit" disabled={lookup.isPending || !phone.trim()} data-testid="button-caller-search">
-              <Search className="mr-1 h-4 w-4" />
-              Search
-            </Button>
-          </form>
-
-          {lookup.isPending && (
-            <div className="space-y-2">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-10 w-full" />
+        <DialogContent className="flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+          {/* ── Header ─────────────────────────────────────────── */}
+          <div className={incoming ? "bg-primary text-primary-foreground" : "border-b bg-muted/50"}>
+            <div className="flex items-center gap-2 px-6 pt-5 text-sm font-medium opacity-90">
+              {incoming ? (
+                <>
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-current" />
+                  </span>
+                  <PhoneIncoming className="h-4 w-4" /> Incoming call
+                </>
+              ) : (
+                <>
+                  <Phone className="h-4 w-4" /> Caller lookup
+                </>
+              )}
             </div>
-          )}
 
-          {!lookup.isPending && customer && (
-            <div className="space-y-4" data-testid="caller-found">
-              <div className="rounded-md border p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-2 text-xl font-semibold" data-testid="text-caller-name">
-                      {customer.name}
-                      {customer.birthday && isBirthdayToday(customer.birthday) && (
-                        <Cake className="h-5 w-5 text-primary" aria-label="Birthday today" />
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {customer.phone}
-                      {customer.email ? ` · ${customer.email}` : ""}
-                    </p>
+            <div className="flex items-center gap-4 px-6 pb-5 pt-3">
+              <div
+                className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-2xl font-bold ${
+                  incoming ? "bg-white/20" : "bg-primary text-primary-foreground"
+                }`}
+                aria-hidden
+              >
+                {loading ? "…" : customer ? initials(customer.name) : <Phone className="h-7 w-7" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="flex items-center gap-2 truncate text-2xl font-bold" data-testid="text-caller-name">
+                  {loading ? "Looking up…" : customer ? customer.name : unknownCaller ? "New caller" : "Find a caller"}
+                  {customer && isBirthdayToday(customer.birthday) && <Cake className="h-5 w-5 shrink-0" aria-label="Birthday today" />}
+                </DialogTitle>
+                <DialogDescription className={incoming ? "text-primary-foreground/85" : ""}>
+                  {phone || (isNativeApp() ? "Calls to this phone open here automatically." : "Type a phone number below.")}
+                  {customer && ` · Customer since ${format(new Date(customer.createdAt), "MMM yyyy")}`}
+                </DialogDescription>
+                {customer && (customer.tags ?? []).length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {customer.tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className={incoming ? "border-0 bg-white/20 text-primary-foreground hover:bg-white/30" : ""}
+                      >
+                        {tag === "VIP" && <Star className="mr-1 h-3 w-3 fill-current" />}
+                        {tag}
+                      </Badge>
+                    ))}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setProfileOpen(true)}
-                    title="Edit customer"
-                    aria-label="Edit customer"
-                    data-testid="button-edit-caller"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {customer.allergies && (
-                  <p className="mt-3 flex items-center gap-2 rounded bg-destructive/10 p-2 text-sm font-medium text-destructive" data-testid="text-caller-allergies">
-                    <AlertTriangle className="h-4 w-4 shrink-0" /> {customer.allergies}
-                  </p>
                 )}
-                {customer.address && (
-                  <p className="mt-2 flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" /> {customer.address}
-                  </p>
-                )}
+              </div>
+            </div>
+          </div>
 
-                <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                  {(customer.tags ?? []).map((tag) => (
-                    <Badge key={tag}>{tag}</Badge>
+          {/* ── Body ───────────────────────────────────────────── */}
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+            <form onSubmit={search} className="flex gap-2">
+              <Input
+                type="tel"
+                placeholder="Search a number, e.g. 0412 345 678"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                aria-label="Phone number"
+                data-testid="input-caller-phone"
+              />
+              <Button type="submit" variant="outline" disabled={loading || !phone.trim()} data-testid="button-caller-search">
+                <Search className="h-4 w-4" />
+                <span className="sr-only">Search</span>
+              </Button>
+            </form>
+
+            {loading && (
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <div className="grid grid-cols-4 gap-2">
+                  {[0, 1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-16" />
                   ))}
-                  <Badge variant="secondary">{customer.totalVisits ?? 0} orders</Badge>
-                  <Badge variant="secondary">{money(customer.totalSpent)} spent</Badge>
-                  {customer.lastOrderAt && (
-                    <Badge variant="secondary">Last: {format(new Date(customer.lastOrderAt), "d MMM")}</Badge>
-                  )}
                 </div>
-                {customer.notes && (
-                  <p className="mt-3 rounded bg-muted p-2 text-sm" data-testid="text-caller-notes">
-                    {customer.notes}
+                <Skeleton className="h-24 w-full" />
+              </div>
+            )}
+
+            {!loading && customer && (
+              <div className="space-y-4" data-testid="caller-found">
+                {customer.allergies && (
+                  <div
+                    className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-destructive"
+                    role="alert"
+                    data-testid="text-caller-allergies"
+                  >
+                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide">Allergy / dietary</p>
+                      <p className="font-medium">{customer.allergies}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <Stat label="Orders" value={String(visits)} />
+                  <Stat label="Total spent" value={money(spent)} />
+                  <Stat label="Avg order" value={visits > 0 ? money(spent / visits) : "—"} />
+                  <Stat
+                    label="Last order"
+                    value={
+                      customer.lastOrderAt
+                        ? formatDistanceToNow(new Date(customer.lastOrderAt), { addSuffix: true })
+                        : "—"
+                    }
+                  />
+                </div>
+
+                {(customer.address || customer.notes) && (
+                  <div className="space-y-2 rounded-lg border p-3 text-sm">
+                    {customer.address && (
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="flex items-start gap-2">
+                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          {customer.address}
+                        </p>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customer.address)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex shrink-0 items-center gap-1 text-primary hover:underline"
+                        >
+                          Map <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    )}
+                    {customer.notes && (
+                      <p className="flex items-start gap-2" data-testid="text-caller-notes">
+                        <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                        {customer.notes}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {usual.length > 0 && (
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Usually orders</p>
+                    <div className="flex flex-wrap gap-2">
+                      {usual.map((item) => (
+                        <Badge key={item.name} variant="outline" className="px-3 py-1 text-sm font-normal">
+                          {item.name} <span className="ml-1.5 text-muted-foreground">×{item.count}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {lastOrder ? (
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last order</p>
+                    <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">
+                          {lastOrder.orderNumber} · {format(new Date(lastOrder.createdAt), "EEE d MMM, h:mm a")}
+                        </span>
+                        <span className="font-semibold">{money(lastOrder.total)}</span>
+                      </div>
+                      <ul className="mt-2 space-y-0.5 text-muted-foreground">
+                        {lastOrder.items.map((item) => (
+                          <li key={item.id}>
+                            {item.quantity}× {item.menuItem?.name ?? "Item"}
+                            {item.notes ? ` — ${item.notes}` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    {orders.length > 1 && (
+                      <details className="mt-2 text-sm">
+                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                          {orders.length - 1} earlier order{orders.length > 2 ? "s" : ""}
+                        </summary>
+                        <div className="mt-2 space-y-2">
+                          {orders.slice(1).map((order) => (
+                            <div key={order.id} className="flex justify-between gap-2 rounded-md border p-2">
+                              <span className="truncate text-muted-foreground">
+                                {format(new Date(order.createdAt), "d MMM")} ·{" "}
+                                {order.items.map((i) => `${i.quantity}× ${i.menuItem?.name ?? "Item"}`).join(", ")}
+                              </span>
+                              <span className="shrink-0">{money(order.total)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                ) : (
+                  <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                    No orders yet. Their first order will show here.
                   </p>
                 )}
               </div>
+            )}
 
-              {lastOrder ? (
-                <Button
-                  className="w-full"
-                  onClick={() => repeatOrder.mutate(customer.id)}
-                  disabled={repeatOrder.isPending}
-                  data-testid="button-repeat-order"
-                >
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  {repeatOrder.isPending ? "Sending…" : "Repeat last order"}
-                </Button>
+            {unknownCaller && (
+              <div className="rounded-lg border border-dashed p-6 text-center" data-testid="caller-not-found">
+                <p className="font-medium">{phone} isn't in your customers yet</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Save their name, address and allergies so you recognise them next time.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ── Actions ────────────────────────────────────────── */}
+          {!loading && (customer || unknownCaller) && (
+            <div className="flex gap-2 border-t bg-background px-6 py-4">
+              {customer ? (
+                <>
+                  <Button variant="outline" onClick={() => setProfileOpen(true)} data-testid="button-edit-caller">
+                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    size="lg"
+                    onClick={() => repeatOrder.mutate(customer.id)}
+                    disabled={!lastOrder || repeatOrder.isPending}
+                    data-testid="button-repeat-order"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    {repeatOrder.isPending ? "Sending to kitchen…" : lastOrder ? `Repeat last order · ${money(lastOrder.total)}` : "No previous order"}
+                  </Button>
+                </>
               ) : (
-                <p className="text-sm text-muted-foreground">No previous orders yet.</p>
+                <Button className="flex-1" size="lg" onClick={() => setProfileOpen(true)} data-testid="button-save-customer">
+                  <UserPlus className="mr-2 h-4 w-4" /> Save as new customer
+                </Button>
               )}
-
-              {result!.orders.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Recent orders</p>
-                  {result!.orders.map((order) => (
-                    <div key={order.id} className="rounded-md border p-3 text-sm">
-                      <div className="flex justify-between gap-2">
-                        <span className="font-medium">
-                          {order.orderNumber} · {format(new Date(order.createdAt), "d MMM yyyy, h:mm a")}
-                        </span>
-                        <span>{money(order.total)}</span>
-                      </div>
-                      <p className="text-muted-foreground">
-                        {order.items.map((i) => `${i.quantity}× ${i.menuItem?.name ?? "Item"}`).join(", ")}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {!lookup.isPending && result && !customer && (
-            <div className="space-y-3 rounded-md border p-4 text-center" data-testid="caller-not-found">
-              <p className="font-medium">New caller</p>
-              <p className="text-sm text-muted-foreground">{phone} isn't in your customer list yet.</p>
-              <Button onClick={() => setProfileOpen(true)} data-testid="button-save-customer">
-                <UserPlus className="mr-2 h-4 w-4" /> Save as new customer
-              </Button>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
       <CustomerProfileDialog
-        customer={customer ?? null}
+        customer={customer}
         initialPhone={phone}
         open={profileOpen}
         onOpenChange={setProfileOpen}
@@ -317,8 +468,13 @@ export function CallerLookup() {
   );
 }
 
-function isBirthdayToday(birthday: string): boolean {
-  const [, month, day] = birthday.split("-").map(Number);
-  const today = new Date();
-  return today.getMonth() + 1 === month && today.getDate() === day;
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="truncate text-base font-semibold" title={value}>
+        {value}
+      </p>
+    </div>
+  );
 }
