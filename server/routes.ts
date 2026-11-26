@@ -18,6 +18,14 @@ import {
   insertRestaurantSettingsSchema,
 } from "../shared/schema.js";
 
+/** JSON can't carry dates, so the browser sends them as text; turn that field back into a Date. */
+function withDate(body: any, field: string) {
+  if (body && typeof body[field] === "string") {
+    return { ...body, [field]: new Date(body[field]) };
+  }
+  return body;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Location routes
   app.get("/api/locations", async (req, res) => {
@@ -465,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/reservations", async (req, res) => {
     try {
-      const validated = insertReservationSchema.parse(req.body);
+      const validated = insertReservationSchema.parse(withDate(req.body, "reservationDate"));
       const reservation = await storage.createReservation(validated);
       res.status(201).json(reservation);
     } catch (error) {
@@ -475,7 +483,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/reservations/:id", async (req, res) => {
     try {
-      const reservation = await storage.updateReservation(req.params.id, req.body);
+      const parsed = insertReservationSchema.partial().safeParse(withDate(req.body, "reservationDate"));
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid reservation data", details: parsed.error.message });
+      }
+      const reservation = await storage.updateReservation(req.params.id, parsed.data);
       if (!reservation) {
         return res.status(404).json({ error: "Reservation not found" });
       }

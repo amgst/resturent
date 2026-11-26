@@ -8,3 +8,7 @@ vite.config.ts.*
 .env
 .env.*
 !.env.example
+
+# Firebase service-account keys (secret)
+firebase-service-account*.json
+*-firebase-adminsdk-*.json
