@@ -159,8 +159,102 @@
       "serverId": null
     }
   ],
-  "orders": [],
-  "orderItems": [],
+  "orders": [
+    {
+      "id": "1762679300380-q7ok72dtl",
+      "createdAt": "2025-11-09T09:08:20.380Z",
+      "updatedAt": "2025-11-09T09:08:49.640Z",
+      "status": "ready",
+      "serverId": null,
+      "tableId": null,
+      "customerId": null,
+      "notes": "Customer: azam",
+      "orderNumber": "#300379",
+      "locationId": "loc-1",
+      "subtotal": "9.99",
+      "tax": "1.00",
+      "total": "10.99"
+    },
+    {
+      "id": "1762681035983-aqa4dkedi",
+      "createdAt": "2025-11-09T09:37:15.983Z",
+      "updatedAt": "2025-11-09T09:37:15.983Z",
+      "status": "new",
+      "serverId": null,
+      "tableId": null,
+      "customerId": null,
+      "notes": "Customer: azam",
+      "orderNumber": "#035982",
+      "locationId": "loc-1",
+      "subtotal": "9.99",
+      "tax": "1.00",
+      "total": "10.99"
+    },
+    {
+      "id": "1762681062723-vt7qdjg0f",
+      "createdAt": "2025-11-09T09:37:42.723Z",
+      "updatedAt": "2025-11-09T09:37:42.723Z",
+      "status": "new",
+      "serverId": null,
+      "tableId": null,
+      "customerId": null,
+      "notes": "Customer: azam",
+      "orderNumber": "#062722",
+      "locationId": "loc-1",
+      "subtotal": "28.99",
+      "tax": "2.90",
+      "total": "31.89"
+    },
+    {
+      "id": "1762681092171-geuyd6moa",
+      "createdAt": "2025-11-09T09:38:12.171Z",
+      "updatedAt": "2025-11-09T09:38:12.171Z",
+      "status": "new",
+      "serverId": null,
+      "tableId": null,
+      "customerId": null,
+      "notes": "Customer: azam",
+      "orderNumber": "#092171",
+      "locationId": "loc-1",
+      "subtotal": "9.99",
+      "tax": "1.00",
+      "total": "10.99"
+    }
+  ],
+  "orderItems": [
+    {
+      "id": "1762679300380-a2syqmzb5",
+      "orderId": "1762679300380-q7ok72dtl",
+      "notes": null,
+      "menuItemId": "item-6",
+      "quantity": 1,
+      "price": "9.99"
+    },
+    {
+      "id": "1762681035983-9kuc4mz3y",
+      "orderId": "1762681035983-aqa4dkedi",
+      "notes": null,
+      "menuItemId": "item-2",
+      "quantity": 1,
+      "price": "9.99"
+    },
+    {
+      "id": "1762681062723-w39pxxn8l",
+      "orderId": "1762681062723-vt7qdjg0f",
+      "notes": null,
+      "menuItemId": "item-3",
+      "quantity": 1,
+      "price": "28.99"
+    },
+    {
+      "id": "1762681092171-sx1eseydj",
+      "orderId": "1762681092171-geuyd6moa",
+      "notes": null,
+      "menuItemId": "item-2",
+      "quantity": 1,
+      "price": "9.99"
+    }
+  ],
   "staff": [
     {
       "id": "staff-1",
