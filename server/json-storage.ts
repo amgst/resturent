@@ -28,8 +28,8 @@ import type {
   OrderWithItems,
   TableWithDetails,
   ReservationWithDetails,
-} from "@shared/schema";
-import type { IStorage } from "./storage";
+} from "../shared/schema.js";
+import type { IStorage } from "./storage.js";
 
 interface JsonData {
   locations: Location[];
@@ -322,9 +322,9 @@ export class JsonStorage implements IStorage {
       const normalizedItem = normalizeToNull(item);
       return {
         id: generateId(),
-        orderId: newOrder.id,
         notes: null,
         ...normalizedItem,
+        orderId: newOrder.id,
       };
     });
     this.data.orderItems.push(...orderItems);
@@ -557,4 +557,3 @@ export class JsonStorage implements IStorage {
   }
 }
 
-export const storage = new JsonStorage();

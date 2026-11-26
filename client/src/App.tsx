@@ -20,6 +20,10 @@ import Reports from "@/pages/reports";
 import QRMenu from "@/pages/qr-menu";
 import Settings from "@/pages/settings";
 import CustomerMenu from "@/pages/customer-menu";
+import Login from "@/pages/login";
+import { AuthProvider, useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
 
 function AdminRouter() {
   return (
@@ -49,6 +53,24 @@ function AppContent() {
     return <CustomerMenu />;
   }
 
+  return <StaffArea />;
+}
+
+function StaffArea() {
+  const { user, loading, signOut } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Loading…
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
   const style = {
     "--sidebar-width": "16rem",
   };
@@ -60,7 +82,22 @@ function AppContent() {
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between p-4 border-b">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <span className="hidden text-sm text-muted-foreground sm:inline" data-testid="text-user-email">
+                {user.email}
+              </span>
+              <ThemeToggle />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={signOut}
+                title="Sign out"
+                aria-label="Sign out"
+                data-testid="button-sign-out"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
           </header>
           <main className="flex-1 overflow-auto p-6">
             <AdminRouter />
@@ -75,7 +112,9 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

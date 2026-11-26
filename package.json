@@ -10,7 +10,8 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "cap:sync": "vite build && cap sync android",
-    "cap:open": "cap open android"
+    "cap:open": "cap open android",
+    "db:import-json": "tsx server/import-json-to-db.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
@@ -59,8 +60,10 @@
     "embla-carousel-react": "^8.6.0",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
+    "firebase": "^13.4.0",
     "framer-motion": "^11.13.1",
     "input-otp": "^1.4.2",
+    "jose": "^6.2.18",
     "lucide-react": "^0.453.0",
     "memoizee": "^0.4.17",
     "memorystore": "^1.6.7",

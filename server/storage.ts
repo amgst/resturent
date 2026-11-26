@@ -1,6 +1,7 @@
-import { db } from "./db";
+import { db } from "./db.js";
+import { JsonStorage } from "./json-storage.js";
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
-import * as schema from "@shared/schema";
+import * as schema from "../shared/schema.js";
 import type {
   Location,
   InsertLocation,
@@ -29,7 +30,7 @@ import type {
   OrderWithItems,
   TableWithDetails,
   ReservationWithDetails,
-} from "@shared/schema";
+} from "../shared/schema.js";
 
 export interface IStorage {
   // Locations
@@ -461,5 +462,16 @@ export class DbStorage implements IStorage {
   }
 }
 
-// Using JSON storage instead of database
-export { storage } from './json-storage';
+function createStorage(): IStorage {
+  if (process.env.DATABASE_URL) {
+    return new DbStorage();
+  }
+  if (process.env.VERCEL) {
+    // Vercel can't keep files between requests, so the JSON file won't work there.
+    throw new Error("DATABASE_URL is not set. Add a Postgres (Neon) database to the Vercel project.");
+  }
+  // Local development without a database: use data/restaurant-data.json
+  return new JsonStorage();
+}
+
+export const storage: IStorage = createStorage();
