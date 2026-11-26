@@ -346,6 +346,14 @@ export class JsonStorage implements IStorage {
     return this.data.orders[index];
   }
 
+  async getOrdersByCustomer(customerId: string, limit: number): Promise<OrderWithItems[]> {
+    return this.data.orders
+      .filter(o => o.customerId === customerId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit)
+      .map(order => this.buildOrderWithItems(order));
+  }
+
   async getStaff(locationId?: string): Promise<Staff[]> {
     if (locationId) {
       return this.data.staff.filter(s => s.locationId === locationId);

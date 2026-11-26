@@ -65,6 +65,7 @@ export interface IStorage {
   getOrder(id: string): Promise<OrderWithItems | undefined>;
   createOrder(order: InsertOrder, items: InsertOrderItem[]): Promise<OrderWithItems>;
   updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
+  getOrdersByCustomer(customerId: string, limit: number): Promise<OrderWithItems[]>;
   
   // Staff
   getStaff(locationId?: string): Promise<Staff[]>;
@@ -300,6 +301,17 @@ export class DbStorage implements IStorage {
       .where(eq(schema.orders.id, id))
       .returning();
     return updated;
+  }
+
+  async getOrdersByCustomer(customerId: string, limit: number): Promise<OrderWithItems[]> {
+    const rows = await db
+      .select({ id: schema.orders.id })
+      .from(schema.orders)
+      .where(eq(schema.orders.customerId, customerId))
+      .orderBy(desc(schema.orders.createdAt))
+      .limit(limit);
+    const orders = await Promise.all(rows.map((row) => this.getOrder(row.id)));
+    return orders.filter((order): order is OrderWithItems => order !== undefined);
   }
 
   // Staff

@@ -24,6 +24,7 @@ import Login from "@/pages/login";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import { CallerLookup } from "@/components/caller-lookup";
 
 function AdminRouter() {
   return (
@@ -86,6 +87,7 @@ function StaffArea() {
               <span className="hidden text-sm text-muted-foreground sm:inline" data-testid="text-user-email">
                 {user.email}
               </span>
+              <CallerLookup />
               <ThemeToggle />
               <Button
                 variant="ghost"

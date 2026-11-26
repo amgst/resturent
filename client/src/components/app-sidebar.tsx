@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { Location } from "@shared/schema";
 import { useEffect } from "react";
+import { AddLocationDialog } from "@/components/add-location-dialog";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -43,7 +44,8 @@ export function AppSidebar() {
   });
 
   useEffect(() => {
-    if (locations.length > 0 && !selectedLocationId) {
+    // Pick the first location if none is chosen, or the saved one no longer exists.
+    if (locations.length > 0 && !locations.some((loc) => loc.id === selectedLocationId)) {
       setSelectedLocationId(locations[0].id);
     }
   }, [locations, selectedLocationId, setSelectedLocationId]);
@@ -65,6 +67,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Location</SidebarGroupLabel>
           <SidebarGroupContent>
+            <div className="flex gap-2">
             <Select
               value={selectedLocationId || undefined}
               onValueChange={setSelectedLocationId}
@@ -81,6 +84,8 @@ export function AppSidebar() {
                 ))}
               </SelectContent>
             </Select>
+            <AddLocationDialog />
+            </div>
           </SidebarGroupContent>
         </SidebarGroup>
 

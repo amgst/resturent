@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
+import { normalizePhone, phonesMatch } from "./phone.js";
 import {
   insertLocationSchema,
   insertMenuItemSchema,
@@ -326,6 +327,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(customers);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch customers" });
+    }
+  });
+
+  // Caller ID: find a customer by phone number, with their recent orders.
+  // Must stay above /api/customers/:id so "lookup" isn't read as an id.
+  app.get("/api/customers/lookup", async (req, res) => {
+    try {
+      const phone = String(req.query.phone ?? "");
+      if (normalizePhone(phone).length < 6) {
+        return res.status(400).json({ error: "Enter a phone number with at least 6 digits" });
+      }
+      const customers = await storage.getCustomers();
+      const customer = customers.find((c) => phonesMatch(c.phone, phone)) ?? null;
+      const orders = customer ? await storage.getOrdersByCustomer(customer.id, 5) : [];
+      res.json({ phone: normalizePhone(phone), customer, orders });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to look up caller" });
+    }
+  });
+
+  // Re-creates the customer's most recent order using today's menu prices.
+  app.post("/api/customers/:id/repeat-last-order", async (req, res) => {
+    try {
+      const locationId = typeof req.body?.locationId === "string" ? req.body.locationId : "";
+      if (!locationId || !(await storage.getLocation(locationId))) {
+        return res.status(400).json({ error: "A valid locationId is required" });
+      }
+      const customer = await storage.getCustomer(req.params.id);
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+      const [lastOrder] = await storage.getOrdersByCustomer(customer.id, 1);
+      if (!lastOrder) {
+        return res.status(404).json({ error: "This customer has no previous orders" });
+      }
+
+      const menu = await storage.getMenuItems();
+      const items = lastOrder.items
+        .map((item) => ({ item, current: menu.find((m) => m.id === item.menuItemId) }))
+        .filter(({ current }) => current && current.available)
+        .map(({ item, current }) => ({
+          menuItemId: current!.id,
+          quantity: item.quantity,
+          price: current!.price,
+          notes: item.notes,
+        }));
+      if (items.length === 0) {
+        return res.status(409).json({ error: "None of the items from the last order are available now" });
+      }
+      const skipped = lastOrder.items.length - items.length;
+
+      const settings = await storage.getSettings(locationId);
+      const taxRate = settings ? parseFloat(settings.taxRate) : 0.1;
+      const subtotal = items.reduce((sum, i) => sum + parseFloat(i.price) * i.quantity, 0);
+      const tax = subtotal * taxRate;
+
+      const order = await storage.createOrder(
+        insertOrderSchema.parse({
+          orderNumber: `#${Date.now().toString().slice(-6)}`,
+          locationId,
+          customerId: customer.id,
+          status: "new",
+          subtotal: subtotal.toFixed(2),
+          tax: tax.toFixed(2),
+          total: (subtotal + tax).toFixed(2),
+          notes: `Phone order (repeat) for ${customer.name}`,
+        }),
+        items.map((i) => insertOrderItemCreateSchema.parse(i)) as any,
+      );
+      res.status(201).json({ order, skipped });
+    } catch (error) {
+      console.error("Repeat order failed:", error);
+      res.status(500).json({ error: "Failed to repeat the last order" });
     }
   });
 
