@@ -42,7 +42,9 @@ interface CartItem extends MenuItem {
 
 export default function CustomerMenu() {
   const money = useMoney();
-  const { data: brand } = useRestaurantSettings(null);
+  // ?location=<id> picks the restaurant (links from the store page / QR codes); otherwise the first one.
+  const urlLocationId = new URLSearchParams(window.location.search).get("location");
+  const { data: brand } = useRestaurantSettings(urlLocationId);
   const taxRate = brand ? parseFloat(brand.taxRate) : 0.1;
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -150,7 +152,8 @@ export default function CustomerMenu() {
       return;
     }
 
-    const locationId = locations[0]?.id;
+    const locationId =
+      (urlLocationId && locations.some((l) => l.id === urlLocationId) ? urlLocationId : null) ?? locations[0]?.id;
     const subtotal = cartTotal;
     const tax = subtotal * taxRate;
     const total = subtotal + tax;

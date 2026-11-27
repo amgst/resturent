@@ -102,6 +102,13 @@ export interface IStorage {
   updateSettings(id: string, settings: Partial<InsertRestaurantSettings>): Promise<RestaurantSettings | undefined>;
   createSettings(settings: InsertRestaurantSettings): Promise<RestaurantSettings>;
 
+  // Demo data (records flagged `demo: true`)
+  /** Writes ready-made records (with ids) straight into a collection. */
+  insertMany(collection: string, rows: Array<Record<string, unknown> & { id: string }>): Promise<void>;
+  hasDemoData(): Promise<boolean>;
+  /** Deletes every record flagged as demo; returns how many were removed. */
+  purgeDemoData(collections: readonly string[]): Promise<number>;
+
   // Analytics
   getSalesData(locationId: string, startDate: Date, endDate: Date): Promise<any>;
 }

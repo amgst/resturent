@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { format, formatDistanceToNow } from "date-fns";
 import {
   AlertTriangle,
   Cake,
+  ClipboardPlus,
   ExternalLink,
   MapPin,
   Pencil,
@@ -75,6 +77,7 @@ export function CallerLookup() {
   const { toast } = useToast();
   const money = useMoney();
   const { selectedLocationId } = useLocationStore();
+  const [, navigate] = useLocation();
   const {
     open,
     phone: requestedPhone,
@@ -182,6 +185,15 @@ export function CallerLookup() {
     onError: (error: Error) =>
       toast({ title: "Couldn't repeat order", description: cleanError(error), variant: "destructive" }),
   });
+
+  /** Open the Quick Order page for this caller (keeps the call log link so the order is recorded on it). */
+  const takeOrder = () => {
+    const params = new URLSearchParams();
+    if (phone.trim()) params.set("phone", phone.trim());
+    if (callLogId) params.set("callLogId", callLogId);
+    close();
+    navigate(`/quick-order?${params.toString()}`);
+  };
 
   const search = (event: FormEvent) => {
     event.preventDefault();
@@ -423,28 +435,33 @@ export function CallerLookup() {
 
           {/* ── Actions ────────────────────────────────────────── */}
           {!loading && (customer || unknownCaller) && (
-            <div className="flex gap-2 border-t bg-background px-6 py-4">
+            <div className="flex flex-wrap gap-2 border-t bg-background px-6 py-4">
               {customer ? (
                 <>
                   <Button variant="outline" onClick={() => setProfileOpen(true)} data-testid="button-edit-caller">
                     <Pencil className="mr-2 h-4 w-4" /> Edit
                   </Button>
-                  <Button
-                    className="flex-1"
-                    size="lg"
-                    onClick={() => repeatOrder.mutate(customer.id)}
-                    disabled={!lastOrder || repeatOrder.isPending}
-                    data-testid="button-repeat-order"
-                  >
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    {repeatOrder.isPending ? "Sending to kitchen…" : lastOrder ? `Repeat last order · ${money(lastOrder.total)}` : "No previous order"}
-                  </Button>
+                  {lastOrder && (
+                    <Button
+                      variant="outline"
+                      onClick={() => repeatOrder.mutate(customer.id)}
+                      disabled={repeatOrder.isPending}
+                      title="Send their last order to the kitchen again"
+                      data-testid="button-repeat-order"
+                    >
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      {repeatOrder.isPending ? "Sending…" : `Repeat last · ${money(lastOrder.total)}`}
+                    </Button>
+                  )}
                 </>
               ) : (
-                <Button className="flex-1" size="lg" onClick={() => setProfileOpen(true)} data-testid="button-save-customer">
-                  <UserPlus className="mr-2 h-4 w-4" /> Save as new customer
+                <Button variant="outline" onClick={() => setProfileOpen(true)} data-testid="button-save-customer">
+                  <UserPlus className="mr-2 h-4 w-4" /> Save customer
                 </Button>
               )}
+              <Button className="flex-1" size="lg" onClick={takeOrder} data-testid="button-take-order">
+                <ClipboardPlus className="mr-2 h-4 w-4" /> Take order
+              </Button>
             </div>
           )}
         </DialogContent>

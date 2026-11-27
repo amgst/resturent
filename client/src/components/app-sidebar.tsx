@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Home, UtensilsCrossed, ShoppingCart, Flame, Users, Calendar, DollarSign, FileText, Database, Settings, Store, QrCode, PhoneCall } from "lucide-react";
+import { Home, UtensilsCrossed, ShoppingCart, Flame, Users, Calendar, DollarSign, FileText, Database, Settings, Store, QrCode, PhoneCall, Globe, ExternalLink, ClipboardPlus } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useLocationStore } from "@/hooks/use-location";
 import {
@@ -26,6 +26,7 @@ const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Menu Management", url: "/menu", icon: UtensilsCrossed },
   { title: "Orders", url: "/orders", icon: ShoppingCart },
+  { title: "Quick Order", url: "/quick-order", icon: ClipboardPlus },
   { title: "Kitchen Display", url: "/kitchen", icon: Flame },
   { title: "POS System", url: "/pos", icon: DollarSign },
   { title: "Tables", url: "/tables", icon: Store },
@@ -116,6 +117,15 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild data-testid="link-store-website">
+                  <a href={`/store${selectedLocationId ? `?location=${selectedLocationId}` : ""}`} target="_blank" rel="noreferrer">
+                    <Globe className="h-4 w-4" />
+                    <span>Store Website</span>
+                    <ExternalLink className="ml-auto h-3 w-3 opacity-60" />
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

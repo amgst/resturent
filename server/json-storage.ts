@@ -584,6 +584,29 @@ export class JsonStorage implements IStorage {
     return newSettings;
   }
 
+  async insertMany(collection: string, rows: Array<Record<string, unknown> & { id: string }>): Promise<void> {
+    const table = ((this.data as any)[collection] ??= []) as unknown[];
+    table.push(...rows);
+    this.saveData();
+  }
+
+  async hasDemoData(): Promise<boolean> {
+    return this.data.locations.some((l: any) => l.demo === true);
+  }
+
+  async purgeDemoData(collections: readonly string[]): Promise<number> {
+    let removed = 0;
+    for (const name of collections) {
+      const table = (this.data as any)[name] as Array<{ demo?: boolean }> | undefined;
+      if (!table) continue;
+      const kept = table.filter((r) => r.demo !== true);
+      removed += table.length - kept.length;
+      (this.data as any)[name] = kept;
+    }
+    this.saveData();
+    return removed;
+  }
+
   async getSalesData(locationId: string, startDate: Date, endDate: Date): Promise<any> {
     const orders = this.data.orders.filter(order => 
       order.locationId === locationId &&

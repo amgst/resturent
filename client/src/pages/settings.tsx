@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLocationStore } from "@/hooks/use-location";
 import { useRestaurantSettings } from "@/hooks/use-settings";
+import { DemoDataCard } from "@/components/demo-data-card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -135,7 +136,17 @@ export default function Settings() {
   });
 
   if (!selectedLocationId) {
-    return <p className="text-muted-foreground">Select a location in the sidebar to edit its settings.</p>;
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Settings</h1>
+          <p className="text-muted-foreground">
+            Add a location with the + button in the sidebar, or load the demo pizzeria to explore.
+          </p>
+        </div>
+        <DemoDataCard />
+      </div>
+    );
   }
 
   const loading = locationLoading || settingsLoading;
@@ -154,6 +165,7 @@ export default function Settings() {
           <TabsTrigger value="general" data-testid="tab-general">General</TabsTrigger>
           <TabsTrigger value="theme" data-testid="tab-theme">Theme & Branding</TabsTrigger>
           <TabsTrigger value="notifications" data-testid="tab-notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="demo" data-testid="tab-demo">Demo data</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-6 space-y-6">
@@ -344,6 +356,9 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="demo" className="mt-6 space-y-6">
+          <DemoDataCard />
         </TabsContent>
       </Tabs>
     </div>

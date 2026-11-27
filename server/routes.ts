@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { normalizePhone, phonesMatch } from "./phone.js";
+import { buildPizzaDemo, DEMO_COLLECTIONS } from "./demo-data.js";
 import {
   insertLocationSchema,
   insertMenuItemSchema,
@@ -510,6 +511,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(call);
     } catch (error) {
       res.status(500).json({ error: "Failed to update call" });
+    }
+  });
+
+  // Demo data: a complete sample pizzeria for trying the app / sales demos
+  app.post("/api/demo-data", async (_req, res) => {
+    try {
+      if (await storage.hasDemoData()) {
+        return res.status(409).json({ error: "The demo pizzeria is already loaded. Remove it first to load it again." });
+      }
+      const { data, locationId } = buildPizzaDemo();
+      // Parents first so links are valid while it loads.
+      for (const name of DEMO_COLLECTIONS) {
+        if (data[name]?.length) await storage.insertMany(name, data[name]);
+      }
+      const counts = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, v.length]));
+      res.status(201).json({ locationId, counts });
+    } catch (error) {
+      console.error("Demo data failed:", error);
+      res.status(500).json({ error: "Failed to load demo data" });
+    }
+  });
+
+  app.delete("/api/demo-data", async (_req, res) => {
+    try {
+      // Children first, then the records they point to.
+      const removed = await storage.purgeDemoData([...DEMO_COLLECTIONS].reverse());
+      res.json({ removed });
+    } catch (error) {
+      console.error("Removing demo data failed:", error);
+      res.status(500).json({ error: "Failed to remove demo data" });
     }
   });
 

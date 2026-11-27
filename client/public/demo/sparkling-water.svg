@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8f4fb"/><stop offset="1" stop-color="#b5d8ee"/></linearGradient>
+    <radialGradient id="shade" cx="0.5" cy="0.45" r="0.6"><stop offset="0.7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.18"/></radialGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-opacity="0.25"/></filter>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)"/>
+  
+  <ellipse cx="200" cy="266" rx="50" ry="9" fill="#000" opacity="0.15"/>
+  <g filter="url(#soft)">
+    <path d="M180 40 h40 v40 q30 20 30 60 v115 q0 10 -10 10 h-80 q-10 0 -10 -10 v-115 q0 -40 30 -60 Z" fill="#a5d6a7" opacity="0.85"/>
+    <rect x="178" y="32" width="44" height="14" rx="4" fill="#2e7d32"/>
+    <rect x="150" y="150" width="100" height="50" fill="#ffffff" opacity="0.85"/>
+  </g>
+  <circle cx="184.47240890990696" cy="216.34351148922812" r="3" fill="#ffffff" opacity="0.8"/><circle cx="189.07922308117327" cy="252.95505383202496" r="3" fill="#ffffff" opacity="0.8"/><circle cx="239.28976392303287" cy="212.95045139612796" r="3" fill="#ffffff" opacity="0.8"/><circle cx="211.04946643765467" cy="188.3993803563876" r="3" fill="#ffffff" opacity="0.8"/><circle cx="212.99716710103115" cy="241.32054242997066" r="3" fill="#ffffff" opacity="0.8"/><circle cx="219.70808305114696" cy="249.19452124916475" r="3" fill="#ffffff" opacity="0.8"/><circle cx="234.76017353628845" cy="227.12045257157803" r="3" fill="#ffffff" opacity="0.8"/><circle cx="166.1007617444764" cy="237.55562367275138" r="3" fill="#ffffff" opacity="0.8"/><circle cx="194.30081487778153" cy="219.2084664612726" r="3" fill="#ffffff" opacity="0.8"/><circle cx="164.32526191445768" cy="225.1464090195007" r="3" fill="#ffffff" opacity="0.8"/><circle cx="227.32963952011204" cy="231.97486626805915" r="3" fill="#ffffff" opacity="0.8"/><circle cx="171.74802985937387" cy="225.6400471047952" r="3" fill="#ffffff" opacity="0.8"/><circle cx="181.6567631327354" cy="228.50243297731782" r="3" fill="#ffffff" opacity="0.8"/><circle cx="207.53078019261724" cy="194.98472891357423" r="3" fill="#ffffff" opacity="0.8"/>
+</svg>

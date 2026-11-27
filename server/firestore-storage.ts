@@ -464,6 +464,38 @@ export class FirestoreStorage implements IStorage {
     });
   }
 
+  // Demo data
+  async insertMany(collection: string, rows: Array<Record<string, unknown> & { id: string }>): Promise<void> {
+    const db = getDb();
+    for (let i = 0; i < rows.length; i += 400) {
+      const batch = db.batch();
+      for (const { id, ...fields } of rows.slice(i, i + 400)) {
+        batch.set(db.collection(collection).doc(id), fields);
+      }
+      await batch.commit();
+    }
+  }
+
+  async hasDemoData(): Promise<boolean> {
+    const snap = await getDb().collection(C.locations).where("demo", "==", true).limit(1).get();
+    return !snap.empty;
+  }
+
+  async purgeDemoData(collections: readonly string[]): Promise<number> {
+    const db = getDb();
+    let removed = 0;
+    for (const name of collections) {
+      const snap = await db.collection(name).where("demo", "==", true).select().get();
+      for (let i = 0; i < snap.docs.length; i += 400) {
+        const batch = db.batch();
+        snap.docs.slice(i, i + 400).forEach((doc) => batch.delete(doc.ref));
+        await batch.commit();
+      }
+      removed += snap.size;
+    }
+    return removed;
+  }
+
   // Analytics
   async getSalesData(locationId: string, startDate: Date, endDate: Date): Promise<any> {
     const orders = (await listWhere<Order>(C.orders, "locationId", locationId)).filter(

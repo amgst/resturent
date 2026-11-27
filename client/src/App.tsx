@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import MenuManagement from "@/pages/menu-management";
 import Orders from "@/pages/orders";
 import POS from "@/pages/pos";
+import QuickOrder from "@/pages/quick-order";
 import Kitchen from "@/pages/kitchen";
 import Tables from "@/pages/tables";
 import Reservations from "@/pages/reservations";
@@ -21,6 +22,7 @@ import QRMenu from "@/pages/qr-menu";
 import Settings from "@/pages/settings";
 import Calls from "@/pages/calls";
 import CustomerMenu from "@/pages/customer-menu";
+import Store from "@/pages/store";
 import Login from "@/pages/login";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -37,6 +39,7 @@ function AdminRouter() {
       <Route path="/menu" component={MenuManagement} />
       <Route path="/orders" component={Orders} />
       <Route path="/pos" component={POS} />
+      <Route path="/quick-order" component={QuickOrder} />
       <Route path="/kitchen" component={Kitchen} />
       <Route path="/tables" component={Tables} />
       <Route path="/reservations" component={Reservations} />
@@ -57,6 +60,11 @@ function AppContent() {
 
   if (isCustomerView) {
     return <CustomerMenu />;
+  }
+
+  // Public storefront website
+  if (location === "/store") {
+    return <Store />;
   }
 
   return <StaffArea />;
